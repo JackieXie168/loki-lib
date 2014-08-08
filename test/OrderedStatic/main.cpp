@@ -18,11 +18,11 @@
 // define to see a runtime crash when not using OrderedStatic
 //#define LOKI_CLASS_LEVEL_THREADING
 
-#include "loki/Functor.h"
+#include <loki/Functor.h>
 #include <iostream>
 
 #ifdef TEST_ORDERED_STATIC
-#include "loki/OrderedStatic.h"
+#include <loki/OrderedStatic.h>
 #endif 
 
 struct L1
@@ -124,7 +124,7 @@ int main()
     
     std::string s("text11");
     *s1=s;
-    std::cout << "value of s1: " << (*s1).c_str() << "\n";
+    std::cout << "value of s1: " << s1->c_str() << "\n";
     
 #else
     
@@ -137,6 +137,11 @@ int main()
 #endif
 
     std::cout << "\n";
+
+#if defined(__BORLANDC__) || defined(_MSC_VER)
+    system("PAUSE");
+#endif
+
     return 0;
 }
 

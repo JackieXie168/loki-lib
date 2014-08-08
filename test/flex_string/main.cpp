@@ -10,10 +10,15 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-#pragma warning (disable : 4786)    // Get rid of browser information too long names
+// $Header:
 
+#ifdef _MSC_VER
+
+#pragma warning (disable : 4786)    // Get rid of browser information too long names
 #ifdef _DEBUG
 #pragma warning (disable : 4786)
+#endif
+
 #endif
 
 #include <stdio.h>
@@ -24,7 +29,7 @@
 //#define NO_ITERATOR_TRAITS
 #endif
 
-#include "loki/flex/flex_string.h"
+#include <loki/flex/flex_string.h>
 
 #include <iostream>
 #include <cstdio>
@@ -61,7 +66,7 @@ template <class String>
 String RandomString(const String* /* model */, unsigned int maxSize)
 {
     String result(random(0, maxSize), '\0');
-    int i = 0;
+    size_t i = 0;
     for (; i != result.size(); ++i)
     {
         result[i] = random('a', 'z');
@@ -70,7 +75,7 @@ String RandomString(const String* /* model */, unsigned int maxSize)
 }
 
 template <class String, class Integral>
-void Num2String(String& str, Integral n)
+void Num2String(String& str, Integral )
 {
     str.resize(10, '\0');
 //    ultoa((unsigned long)n, &str[0], 10);
@@ -89,6 +94,8 @@ std::list<char> RandomList(unsigned int maxSize)
     return lst;
 }
 
+int currentTest = 0;
+
 template <class String>
 String Test(String, unsigned int count, bool avoidAliasing)
 {
@@ -100,8 +107,11 @@ String Test(String, unsigned int count, bool avoidAliasing)
     {
         test = RandomString(&test, maxString);
 
-		static unsigned int functionSelector = 0;
-        switch (++functionSelector % 90)
+        static unsigned int functionSelector = 0;
+        ++functionSelector;
+        currentTest = functionSelector % 90; 
+        //std::cout << currentTest <<"\n";
+        switch (currentTest)
         {
         case 0:
             // test default constructor 21.3.1
@@ -207,20 +217,23 @@ String Test(String, unsigned int count, bool avoidAliasing)
             break;
         case 14:
             // exercise empty
-			{
-				const char* kEmptyString = "empty";
-				const char* kNonEmptyString = "not empty";
-				if (test.empty()) test = "empty";
-				else test = "not empty";
-				// the above assignments don't work yet; use iterator assign
-				if (test.empty()) test = String(kEmptyString, kEmptyString + strlen(kEmptyString));
-				else test = String(kNonEmptyString, kNonEmptyString + strlen(kNonEmptyString));
-			}
+            {
+                const char* kEmptyString = "empty";
+                const char* kNonEmptyString = "not empty";
+                if (test.empty()) test = "empty";
+                else test = "not empty";
+                // the above assignments don't work yet; use iterator assign
+                if (test.empty()) test = String(kEmptyString, kEmptyString + strlen(kEmptyString));
+                else test = String(kNonEmptyString, kNonEmptyString + strlen(kNonEmptyString));
+            }
             break;
         case 15:
             // exercise element access 21.3.4
-            test[random(0, test.size() - 1)];
-            test.at(random(0, test.size() - 1));
+            if(!test.empty())
+            {
+                test[random(0, test.size() - 1)];
+                test.at(random(0, test.size() - 1));
+            }
             break;
         case 16:
             // 21.3.5 modifiers
@@ -280,7 +293,7 @@ String Test(String, unsigned int count, bool avoidAliasing)
                 std::list<char> lst(RandomList(maxString));
                 test.append(lst.begin(), lst.end());
             }
-			break;
+            break;
         case 27:
             // 21.3.5 modifiers
             // skip push_back, Dinkumware doesn't support it
@@ -370,7 +383,8 @@ String Test(String, unsigned int count, bool avoidAliasing)
             break;
         case 42:
             // 21.3.5 modifiers
-            test.erase(test.begin() + random(0, test.size()));
+            if(!test.empty())
+                test.erase(test.begin() + random(0, test.size()));
             break;
         case 43:
             // 21.3.5 modifiers
@@ -523,7 +537,7 @@ String Test(String, unsigned int count, bool avoidAliasing)
                     n = random(0, test.size() - pos);
                 typename String::iterator b = test.begin();
                 const String str = RandomString(&test, maxString);
-				const typename String::value_type* s = str.c_str();
+                const typename String::value_type* s = str.c_str();
                 test.replace(
                     b + pos, 
                     b + pos + n, 
@@ -543,8 +557,8 @@ String Test(String, unsigned int count, bool avoidAliasing)
         case 56:
             // 21.3.5 modifiers
             {
-				std::vector<typename String::value_type> 
-					vec(random(0, maxString));
+                std::vector<typename String::value_type> 
+                    vec(random(0, maxString));
                 test.copy(
                     &vec[0], 
                     vec.size(), 
@@ -850,6 +864,23 @@ String Test(String, unsigned int count, bool avoidAliasing)
     return test;
 }
 
+template<class T>
+void checkResults(const std::string& reference, const T& tested)
+{
+    if( (tested.size() != reference.size())||
+        (std::string(tested.data(), tested.size()) != reference) )
+    {
+        std::cout << "\nTest " << currentTest << " failed: \n";
+        std::cout << "reference.size() = " << reference.size() << "\n";
+        std::cout << "tested.size()    = " << tested.size()    << "\n";
+        std::cout << "reference data   = " <<  reference << "\n";
+        std::cout << "tested    data   = " <<  tested    << "\n";
+    }
+
+    //assert(tested.size() == reference.size());
+    //assert(std::string(tested.data(), tested.size()) == reference);
+}
+
 void Compare()
 {
     unsigned int count = 0;
@@ -863,7 +894,7 @@ void Compare()
         srand(t);
         const std::string reference = Test(std::string(), 1, true);
 
-		{
+        {
             srand(t);
             typedef flex_string<
                 char,
@@ -872,11 +903,10 @@ void Compare()
                 SimpleStringStorage<char, std::allocator<char> >
             > my_string;
             const my_string tested = Test(my_string(), 1, false);
-            assert(tested.size() == reference.size());
-            assert(std::string(tested.data(), tested.size()) == reference);
+            checkResults(reference, tested);
         }
 
-		{
+        {
             srand(t);
             typedef flex_string<
                 char,
@@ -885,11 +915,10 @@ void Compare()
                 AllocatorStringStorage<char, std::allocator<char> >
             > my_string;
             const my_string tested = Test(my_string(), 1, false);
-            assert(tested.size() == reference.size());
-            assert(std::string(tested.data(), tested.size()) == reference);
+            checkResults(reference, tested);
         }
 
-		{
+        {
             srand(t);
             typedef flex_string<
                 char,
@@ -898,11 +927,10 @@ void Compare()
                 AllocatorStringStorage<char, mallocator<char> >
             > my_string;
             const my_string tested = Test(my_string(), 1, false);
-            assert(tested.size() == reference.size());
-            assert(std::string(tested.data(), tested.size()) == reference);
+            checkResults(reference, tested);
         }
 
-		{
+        {
             srand(t);
             typedef flex_string<
                 char,
@@ -911,10 +939,9 @@ void Compare()
                 VectorStringStorage<char, std::allocator<char> >
             > my_string;
             const my_string tested = Test(my_string(), 1, false);
-            assert(tested.size() == reference.size());
-            assert(std::string(tested.data(), tested.size()) == reference);
+            checkResults(reference, tested);
         }
-		{
+        {
             srand(t);
             typedef VectorStringStorage<char, std::allocator<char> >
                 Storage;
@@ -926,8 +953,7 @@ void Compare()
             > my_string;
             static my_string sample;
             const my_string tested(Test(sample, 1, false));
-            assert(tested.size() == reference.size());
-            assert(std::string(tested.data(), tested.size()) == reference);
+            checkResults(reference, tested);
         }
         {
             srand(t);
@@ -941,8 +967,7 @@ void Compare()
             > my_string;
             static my_string sample;
             const my_string tested(Test(sample, 1, false));
-            assert(tested.size() == reference.size());
-            assert(std::string(tested.data(), tested.size()) == reference);
+            checkResults(reference, tested);
         }
         {
             srand(t);
@@ -956,13 +981,12 @@ void Compare()
             > my_string;
             static my_string sample;
             const my_string tested(Test(sample, 1, false));
-            assert(tested.size() == reference.size());
-            assert(std::string(tested.data(), tested.size()) == reference);
+            checkResults(reference, tested);
         }
 /*
-        {	// SimpleStringStorage with UTF16 Encoding
+        {    // SimpleStringStorage with UTF16 Encoding
             srand(t);
-			typedef SimpleStringStorage<unicode::UTF16Char>
+            typedef SimpleStringStorage<unicode::UTF16Char>
                 Storage;
             typedef flex_string<
                 unicode::UTF16Char,
@@ -975,7 +999,7 @@ void Compare()
             assert(tested.size() == reference.size());
             //assert(std::string(tested.data(), tested.size()) == reference);
        }
-	   */
+       */
     }
 }
 /*
@@ -1000,10 +1024,10 @@ int main()
 
    assert(std::numeric_limits<char_type>::is_specialized);
  
-	assert(std::numeric_limits<std_string_t::iterator::value_type>::is_specialized); 
-	s1.replace<std_string_t::iterator>(s1.begin(), s1.begin(), 
-	s2.begin(),s2.end());
-	return 0;
+    assert(std::numeric_limits<std_string_t::iterator::value_type>::is_specialized); 
+    s1.replace<std_string_t::iterator>(s1.begin(), s1.begin(), 
+    s2.begin(),s2.end());
+    return 0;
 }
 */
 int main()

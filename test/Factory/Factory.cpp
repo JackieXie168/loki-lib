@@ -7,7 +7,7 @@
 // for any purpose. It is provided "as is" without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/Factory/Factory.cpp,v 1.9 2005/11/12 16:52:36 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/test/Factory/Factory.cpp,v 1.13 2006/01/09 07:27:01 syntheticpp Exp $
 
 //#define CLASS_LEVEL_THERADING
 
@@ -15,15 +15,15 @@
 
 #include <iostream>
 #include <string>
-#include "loki/Factory.h"
-#include "loki/Functor.h"
+#include <loki/Factory.h>
+#include <loki/Functor.h>
 
 #ifdef LOKI_DISABLE_TYPELIST_MACROS
 #define USE_WQUENCE
 #endif
 
 #ifdef USE_SEQUENCE
-#include "loki/Sequence.h"
+#include <loki/Sequence.h>
 
 #endif
 
@@ -111,6 +111,7 @@ Product* createProductOver( int a, int b )
  
 class AbstractCreator{
 public:
+    virtual ~AbstractCreator() {}
     virtual AbstractProduct* create() = 0;
     virtual AbstractProduct* createParm( int, int ) = 0;
 };
@@ -242,7 +243,7 @@ void heap_debug()
 
 int main()
 {
-	heap_debug();
+    heap_debug();
 
     reg();
     
@@ -280,26 +281,40 @@ int main()
     p= PFactoryFunctorParm::Instance().CreateObject( 1, func2, 64,64 );
     delete p;
 
-	
+    
     cout << endl;
-	cout << "Registered ids: \n";
+    cout << "Registered ids: \n";
 
-	std::vector<std::string> ids = PFactory::Instance().RegisteredIds();
+    std::vector<std::string> ids = PFactory::Instance().RegisteredIds();
 
-	for(std::vector<std::string>::iterator it=ids.begin(); it!=ids.end(); ++it)
-		cout << *it << "\n";
+    for(std::vector<std::string>::iterator it=ids.begin(); it!=ids.end(); ++it)
+        cout << *it << "\n";
 
 
     cout << endl;
     cout << endl;
-
+    
+#if defined(__BORLANDC__) || defined(_MSC_VER)
     system("PAUSE");
+#endif
 
     return EXIT_SUCCESS;
 }
 
 
 // $Log: Factory.cpp,v $
+// Revision 1.13  2006/01/09 07:27:01  syntheticpp
+// replace tabs
+//
+// Revision 1.12  2006/01/05 00:23:43  syntheticpp
+// always use #include <loki/...>, Thanks to Lukas Fittl
+//
+// Revision 1.11  2006/01/04 23:54:28  syntheticpp
+// remove system(PAUSE) for gcc, Thanks to Lukas Fittl
+//
+// Revision 1.10  2006/01/04 23:45:08  syntheticpp
+// remove gcc 4.0 warnings, Thanks to Lukas Fittl
+//
 // Revision 1.9  2005/11/12 16:52:36  syntheticpp
 // protect private data, add std::vector<IdType> RegisteredIds()
 //

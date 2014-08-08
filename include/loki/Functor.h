@@ -1335,13 +1335,39 @@ namespace Loki
         template <typename R, class TList, template <class> class ThreadingModel>
         struct BinderFirstTraits< Functor<R, TList, ThreadingModel> >
         {
-            typedef typename TL::Erase<TList, 
-                    typename TL::TypeAt<TList, 0>::Result>::Result
-                ParmList;
+            typedef Functor<R, TList, ThreadingModel> OriginalFunctor;
+
+            typedef typename TL::Erase<TList,typename TL::TypeAt<TList, 0>::Result>
+                             ::Result
+                    ParmList;
+
+            typedef typename TL::TypeAt<TList, 0>::Result OriginalParm1;
+
             typedef Functor<R, ParmList, ThreadingModel> BoundFunctorType;
+
             typedef typename BoundFunctorType::Impl Impl;
-        };        
-    }
+
+        };  
+
+
+        template<class T>
+        struct BinderFirstBoundTypeStorage;
+
+        template<class T>
+        struct BinderFirstBoundTypeStorage
+        {
+            typedef typename TypeTraits<T>::ParameterType RefOrValue;
+        };
+        
+        template <typename R, class TList, template <class> class ThreadingModel>
+        struct BinderFirstBoundTypeStorage< Functor<R, TList, ThreadingModel> >
+        {
+            typedef Functor<R, TList, ThreadingModel> OriginalFunctor;
+            typedef const typename TypeTraits<OriginalFunctor>::ReferredType RefOrValue;
+        };  
+
+
+    } // namespace Private
 
 ////////////////////////////////////////////////////////////////////////////////
 ///  \class BinderFirst
@@ -1359,6 +1385,12 @@ namespace Loki
 
         typedef typename OriginalFunctor::Parm1 BoundType;
 
+        typedef typename Private::BinderFirstBoundTypeStorage<
+                             typename Private::BinderFirstTraits<OriginalFunctor>
+                             ::OriginalParm1>
+                         ::RefOrValue
+                BoundTypeStorage;
+                        
         typedef typename OriginalFunctor::Parm2 Parm1;
         typedef typename OriginalFunctor::Parm3 Parm2;
         typedef typename OriginalFunctor::Parm4 Parm3;
@@ -1376,10 +1408,11 @@ namespace Loki
         typedef EmptyType Parm15;
 
     public:
+        
         BinderFirst(const OriginalFunctor& fun, BoundType bound)
         : f_(fun), b_(bound)
         {}
-        
+
         LOKI_DEFINE_CLONE_FUNCTORIMPL(BinderFirst)
         
         // operator() implementations for up to 15 arguments
@@ -1446,7 +1479,7 @@ namespace Loki
         
     private:
         OriginalFunctor f_;
-        BoundType b_;
+        BoundTypeStorage b_;
     };
     
 ////////////////////////////////////////////////////////////////////////////////
@@ -1457,7 +1490,7 @@ namespace Loki
     template <class Fctor>
     typename Private::BinderFirstTraits<Fctor>::BoundFunctorType
     BindFirst(
-        const Fctor& fun,
+        const Fctor& fun, 
         typename Fctor::Parm1 bound)
     {
         typedef typename Private::BinderFirstTraits<Fctor>::BoundFunctorType
@@ -1621,6 +1654,7 @@ namespace Loki
 ////////////////////////////////////////////////////////////////////////////////
 // Change log:
 // June 20, 2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
+// January 1, 2006: pass Functor arguments in BindFirst by value, Peter Kümmel
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif  // FUNCTOR_INC_

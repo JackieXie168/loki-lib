@@ -11,14 +11,14 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/SmallObj/SmallObjBench.cpp,v 1.15 2005/11/02 01:46:04 rich_sposato Exp $
+// $Header: /cvsroot/loki-lib/loki/test/SmallObj/SmallObjBench.cpp,v 1.18 2006/01/05 09:55:09 syntheticpp Exp $
 
 //#define LOKI_CLASS_LEVEL_THREADING
 //#define LOKI_OBJECT_LEVEL_THREADING
 
 #define LOKI_SMALL_OBJECT_USE_NEW_ARRAY
 
-#include "../../include/loki/SmallObj.h"
+#include <loki/SmallObj.h>
 #include "timer.h"
 
 #include <iostream>
@@ -243,16 +243,19 @@ LOKI_SMALLOBJ_BENCH_ARRAY(new_del_a_on_a_all,std::allocator<T[TN]> st ,
     cout << endl << endl;
 #endif
 
+#define LOKI_ALLOCATOR_PARAMETERS Loki::SingleThreaded, 4096, 32, 4, Loki::NoDestroy
+
 template<unsigned int Size, int loop>
 void testSize()
 {
     typedef Base<Size, void> A;
-    typedef Base<Size, Loki::SmallObject< Loki::SingleThreaded > > B;
-    typedef Base<Size, Loki::SmallValueObject< Loki::SingleThreaded > > C;
+    typedef Base<Size, Loki::SmallObject< LOKI_ALLOCATOR_PARAMETERS > > B;
+    typedef Base<Size, Loki::SmallValueObject< LOKI_ALLOCATOR_PARAMETERS > > C;
 #ifdef COMPARE_BOOST_POOL
     typedef BoostPoolNew<Size> D;
 #endif
 
+    assert( (!Loki::AllocatorSingleton< LOKI_ALLOCATOR_PARAMETERS >::IsCorrupted()) );
     cout << endl << endl;
     cout << "Allocator Benchmark Tests with " << Size << " bytes big objects " << endl;
     cout << endl;
@@ -275,21 +278,26 @@ void testSize()
 
     cout << loop  << " times ";
     LOKI_SMALLOBJBECH_ABCD(delete_new        ,0,loop,t,"'delete new T'");
+    assert( (!Loki::AllocatorSingleton< LOKI_ALLOCATOR_PARAMETERS >::IsCorrupted()) );
     
     cout << "N=" << N <<" :  " << loop  << " times ";
     LOKI_SMALLOBJBECH_ABCD(delete_new_array    ,N,loop,t,"'delete[] new T[N]'");
+    assert( (!Loki::AllocatorSingleton< LOKI_ALLOCATOR_PARAMETERS >::IsCorrupted()) );
 
     cout << "i=0..." << Narr << " :  ";
     LOKI_SMALLOBJBECH_ABCD(new_del_on_arr    ,0,Narr,t,"1. 'arr[i] = new T'   2. 'delete arr[i]'");
+    assert( (!Loki::AllocatorSingleton< LOKI_ALLOCATOR_PARAMETERS >::IsCorrupted()) );
     
     cout << "i=0..." << Narr << ",  N=" << N <<" :  ";
     LOKI_SMALLOBJBECH_ABCD(new_del_a_on_a    ,N,Narr,t,"1. 'arr[i] = new T[N]'   2. 'delete[] arr[i]'");
+    assert( (!Loki::AllocatorSingleton< LOKI_ALLOCATOR_PARAMETERS >::IsCorrupted()) );
 
 
     delete [] a;
     
     cout << "_________________________________________________________________" << endl;
-    Loki::AllocatorSingleton<>::ClearExtraMemory();
+    assert( (!Loki::AllocatorSingleton< LOKI_ALLOCATOR_PARAMETERS >::IsCorrupted()) );
+    Loki::AllocatorSingleton< LOKI_ALLOCATOR_PARAMETERS >::ClearExtraMemory();
 }
 
 
@@ -306,10 +314,8 @@ int main()
     testSize<16,loop>();
     testSize<17,loop>();
 
-
-#if defined(__BORLANDC__) || defined(__GNUC__) || defined(_MSC_VER)
-    // Stop console window from closing if run from IDE.
-    system("pause"); 
+#if defined(__BORLANDC__) || defined(_MSC_VER)
+    system("PAUSE");
 #endif
 
     return 0;
@@ -318,6 +324,15 @@ int main()
 // ----------------------------------------------------------------------------
 
 // $Log: SmallObjBench.cpp,v $
+// Revision 1.18  2006/01/05 09:55:09  syntheticpp
+// assert, include path, and virtual ~ patches by Lukas Fittl
+//
+// Revision 1.17  2006/01/04 23:54:30  syntheticpp
+// remove system(PAUSE) for gcc, Thanks to Lukas Fittl
+//
+// Revision 1.16  2005/12/08 22:23:33  rich_sposato
+// Added checks for whether loki's allocator is corrupted.
+//
 // Revision 1.15  2005/11/02 01:46:04  rich_sposato
 // Added explanatory comment about why class has no new [] and delete []
 // operators.  Removed other comment which is now useless.

@@ -11,7 +11,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/RegressionTest/Test.cpp,v 1.12 2005/10/30 14:22:31 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/test/RegressionTest/Test.cpp,v 1.13 2006/01/04 23:54:30 syntheticpp Exp $
 
 #ifdef __INTEL_COMPILER
 # pragma warning(disable: 111 193 304 383 444 488 981 1418)
@@ -62,10 +62,9 @@ int main()
 {
     int result = Test::run("Loki Unit Test");
 
-    #if defined(__BORLANDC__) || defined(__GNUC__) || defined(_MSC_VER)
-    // Stop console window from closing if run from IDE.
-    system("pause"); 
-    #endif
+#if defined(__BORLANDC__) || defined(_MSC_VER)
+    system("PAUSE");
+#endif
 
     return result;
 }
@@ -117,6 +116,9 @@ int main()
 
 
 // $Log: Test.cpp,v $
+// Revision 1.13  2006/01/04 23:54:30  syntheticpp
+// remove system(PAUSE) for gcc, Thanks to Lukas Fittl
+//
 // Revision 1.12  2005/10/30 14:22:31  syntheticpp
 // disable threading because the sdk (windows.h) is not detected automatically by the batch scripts
 //

@@ -183,6 +183,7 @@ class flex_string : private Storage
 #else
 		Invariant(const flex_string&) {} 
 #endif
+	Invariant& operator=(const Invariant&);
     };
     
 public:
@@ -379,7 +380,8 @@ public:
     
     flex_string& append(const value_type* s, const size_type n)
     { 
-		Invariant checker(*this); checker; 
+		Invariant checker(*this); 
+		(void) checker; 
         static std::less_equal<const value_type*> le;
 		if (le(&*begin(), s) && le(s, &*end())) // aliasing
 		{
@@ -434,7 +436,8 @@ public:
     
     flex_string& assign(const value_type* s, const size_type n)
     {
-		Invariant checker(*this); checker; 
+		Invariant checker(*this); 
+		(void) checker; 
         if (size() >= n)
         {
 			std::copy(s, s + n, begin());
@@ -497,7 +500,8 @@ private:
     flex_string& InsertImplDiscr(iterator p, 
         size_type n, value_type c, Selector<1>)
     { 
-		Invariant checker(*this); checker; 
+		Invariant checker(*this); 
+		(void) checker; 
 		assert(p >= begin() && p <= end());
 		if (capacity() - size() < n)
 		{
@@ -506,7 +510,8 @@ private:
 			p = begin() + sz;
 		}
 		const iterator oldEnd = end();
-		if (p + n < oldEnd)
+		//if (p + n < oldEnd) // replaced because of crash (pk)
+		if( n < size_type(oldEnd - p))
 		{
 			append(oldEnd - n, oldEnd);
 			//std::copy(
@@ -538,7 +543,8 @@ private:
     void InsertImpl(iterator i,
 		FwdIterator s1, FwdIterator s2, std::forward_iterator_tag)
     { 
-		Invariant checker(*this); checker; 
+		Invariant checker(*this); 
+		(void) checker;
 		const size_type pos = i - begin();
 		const typename std::iterator_traits<FwdIterator>::difference_type n2 = 
 			std::distance(s1, s2);
@@ -604,7 +610,8 @@ public:
     
     flex_string& erase(size_type pos = 0, size_type n = npos)
     { 
-		Invariant checker(*this); checker;
+		Invariant checker(*this); 
+		(void) checker;
         Enforce(pos <= length(), (std::out_of_range*)0, "");
 		Procust(n, length() - pos);
 		std::copy(begin() + pos + n, end(), begin() + pos);
@@ -647,7 +654,8 @@ public:
 	flex_string& replace(const size_type pos, size_type n1, 
 		const value_type* s1, const size_type n2)
     {
-		Invariant checker(*this); checker;
+		Invariant checker(*this); 
+		(void) checker;
         Enforce(pos <= size(), (std::out_of_range*)0, "");
         Procust(n1, size() - pos);
 		const iterator b = begin() + pos;
@@ -731,7 +739,8 @@ public:
     flex_string& replace(size_type pos, size_type n1, 
 		StrOrLength s_or_n2, NumOrChar n_or_c)
     {
-		Invariant checker(*this); checker;
+		Invariant checker(*this); 
+		(void) checker;
 		Enforce(pos <= size(), (std::out_of_range*)0, "");
 		Procust(n1, length() - pos);
 		const iterator b = begin() + pos;
@@ -776,7 +785,7 @@ private:
         InputIterator b, InputIterator e, Selector<0>)
     { 
 		ReplaceImpl(i1, i2, b, e, 
-			typename  std::iterator_traits<InputIterator>::iterator_category());
+			typename std::iterator_traits<InputIterator>::iterator_category());
         return *this;
     }
 
@@ -784,7 +793,8 @@ private:
     void ReplaceImpl(iterator i1, iterator i2,
 		FwdIterator s1, FwdIterator s2, std::forward_iterator_tag)
     { 
-		Invariant checker(*this); checker;
+		Invariant checker(*this); 
+		(void) checker;
 		const typename std::iterator_traits<iterator>::difference_type n1 = 
 			i2 - i1;
 		assert(n1 >= 0);
@@ -816,7 +826,7 @@ private:
 		{
 			// grows
 			flex_string_details::copy_n(s1, n1, i1);
-			advance(s1, n1);
+			std::advance(s1, n1);
 			insert(i2, s1, s2);
 		}
     }
@@ -1041,7 +1051,10 @@ public:
     }
 
     int compare(const flex_string& str) const
-	{ return traits_type::compare(data(), str.data(), Min(size(), str.size())); }
+	{ 
+		// FIX due to Goncalo N M de Carvalho July 18, 2005
+		return compare(0, size(), str);
+	}
     
     int compare(size_type pos1, size_type n1,
         const flex_string& str) const
@@ -1062,7 +1075,12 @@ public:
     {
         Enforce(pos1 <= size(), (std::out_of_range*)0, "");
 		Procust(n1, size() - pos1);
-		return traits_type::compare(data(), s, Min(n1, n2));
+		const int r = traits_type::compare(data(), s, Min(n1, n2));
+		return 
+			r != 0 ? r :
+			n1 > n2 ? 1 :
+			n1 < n2 ? -1 :
+			0;
     }
     
     int compare(size_type pos1, size_type n1,
@@ -1075,8 +1093,7 @@ public:
 
     int compare(const value_type* s) const
 	{ 
-		return traits_type::compare(data(), s, 
-			Min(size(), traits_type::length(s))); 
+		return traits_type::compare(data(), s, traits_type::length(s)); 
 	}
 };
 

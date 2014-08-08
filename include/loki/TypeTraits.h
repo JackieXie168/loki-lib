@@ -4,6 +4,10 @@
 #include "Typelist.h"
 #include "Sequence.h"
 
+#if (defined _MSC_VER) && (_MSC_VER < 1400)
+#include <string>
+#endif
+
 namespace Loki
 {
 ////////////////////////////////////////////////////////////////////////////////
@@ -2184,7 +2188,7 @@ namespace Loki
         enum { isIntegral       = isStdIntegral || isUnsignedInt || isSignedInt };
         enum { isFloat          = isStdFloat || IsCustomFloat<UnqualifiedType>::value };
         enum { isArith          = isIntegral || isFloat };
-        enum { isFundamental    = isStdFundamental || isArith || isFloat };
+        enum { isFundamental    = isStdFundamental || isArith };
         
         typedef typename Select<isStdArith || isPointer || isMemberPointer, T, 
                 typename Private::AddParameterType<T>::Result>::Result 
