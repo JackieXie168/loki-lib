@@ -7,7 +7,7 @@
 // for any purpose. It is provided "as is" without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: Factory.cpp 761 2006-10-17 20:48:18Z syntheticpp $
+// $Id: Factory.cpp 823 2007-05-08 10:48:40Z lfittl $
 
 
 //#define CLASS_LEVEL_THERADING
@@ -119,7 +119,7 @@ public:
 
 class Creator : public AbstractCreator{
 public:
-    Creator(){};
+    Creator(){}
     AbstractProduct* create()                 
     {
         cout << "Creator::create()" << endl;
@@ -139,7 +139,7 @@ public:
 template< class T>
 class CreatorT{
 public:
-    CreatorT(){};
+    CreatorT(){}
     T* create()                 
     {
         cout << "CreatorT<T>::create()" << endl;

@@ -10,10 +10,14 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: strong.cpp 805 2007-01-13 01:47:23Z rich_sposato $
+// $Id: strong.cpp 916 2008-12-19 13:08:55Z syntheticpp $
 
 
 // ----------------------------------------------------------------------------
+
+#ifndef LOKI_CLASS_LEVEL_THREADING
+#define LOKI_CLASS_LEVEL_THREADING
+#endif
 
 #include <loki/StrongPtr.h>
 
@@ -45,6 +49,74 @@ typedef Loki::StrongPtr< Thingy, true, TwoRefCounts, DisallowConversion,
 typedef Loki::StrongPtr< Thingy, true, TwoRefCounts, DisallowConversion,
     AssertCheck, CantResetWithStrong, DeleteNothing, DontPropagateConst >
     Thingy_DeleteNothing_ptr;
+
+
+// ----------------------------------------------------------------------------
+
+class Counted
+{
+public:
+
+    Counted( void ) : m_size( 0 )
+    {
+        s_constructions++;
+    }
+
+    ~Counted( void )
+    {
+        s_destructions++;
+    }
+
+    static inline bool AllDestroyed( void )
+    {
+        return ( s_constructions == s_destructions );
+    }
+
+    static inline bool ExtraConstructions( void )
+    {
+        return ( s_constructions > s_destructions );
+    }
+
+    static inline bool ExtraDestructions( void )
+    {
+        return ( s_constructions < s_destructions );
+    }
+
+    static inline unsigned int GetCtorCount( void )
+    {
+        return s_constructions;
+    }
+
+    static inline unsigned int GetDtorCount( void )
+    {
+        return s_destructions;
+    }
+
+private:
+    /// Not implemented.
+    Counted( const Counted & );
+    /// Not implemented.
+    Counted & operator = ( const Counted & );
+
+    static unsigned int s_constructions;
+    static unsigned int s_destructions;
+
+    int m_size;
+};
+
+unsigned int Counted::s_constructions = 0;
+unsigned int Counted::s_destructions  = 0;
+
+typedef ::Loki::StrongPtr< Counted, false > Counted_WeakPtr;
+typedef ::Loki::StrongPtr< Counted, true  > Counted_StrongPtr;
+
+typedef ::Loki::StrongPtr< Counted, false, ::Loki::TwoRefLinks > Linked_WeakPtr;
+typedef ::Loki::StrongPtr< Counted, true,  ::Loki::TwoRefLinks > Linked_StrongPtr;
+
+typedef ::Loki::StrongPtr< Counted, false, ::Loki::LockableTwoRefCounts >
+    Lockable_WeakPtr;
+typedef ::Loki::StrongPtr< Counted, true,  ::Loki::LockableTwoRefCounts >
+    Lockable_StrongPtr;
 
 
 // ----------------------------------------------------------------------------
@@ -249,6 +321,57 @@ typedef Loki::StrongPtr< const BaseClass, true, TwoRefCounts, DisallowConversion
 typedef Loki::StrongPtr< const BaseClass, false, TwoRefCounts, DisallowConversion,
     AssertCheck, CantResetWithStrong, DeleteSingle, PropagateConst >
     ConstBase_WeakCount_NoConvert_Assert_Propagate_ptr;
+
+// ----------------------------------------------------------------------------
+
+void DoWeakLeakTest( void )
+{
+    const unsigned int ctorCount = Counted::GetCtorCount();
+    const unsigned int dtorCount = Counted::GetDtorCount();
+    assert( Counted::AllDestroyed() );
+
+    {
+        Counted_WeakPtr pWeakInt;
+        {
+            Counted_StrongPtr pStrongInt( new Counted );
+            pWeakInt = pStrongInt;
+            assert( Counted::ExtraConstructions() );
+            assert( Counted::GetCtorCount() == ctorCount + 1 );
+            assert( Counted::GetDtorCount() == dtorCount );
+        }
+        assert( Counted::AllDestroyed() );
+        assert( Counted::GetCtorCount() == ctorCount + 1 );
+        assert( Counted::GetDtorCount() == dtorCount + 1 );
+    }
+
+    {
+        Lockable_WeakPtr pWeakInt;
+        {
+            Lockable_StrongPtr pStrongInt( new Counted );
+            pWeakInt = pStrongInt;
+            assert( Counted::ExtraConstructions() );
+            assert( Counted::GetCtorCount() == ctorCount + 2 );
+            assert( Counted::GetDtorCount() == dtorCount + 1 );
+        }
+        assert( Counted::AllDestroyed() );
+        assert( Counted::GetCtorCount() == ctorCount + 2 );
+        assert( Counted::GetDtorCount() == dtorCount + 2 );
+    }
+
+    {
+        Linked_WeakPtr pWeakInt;
+        {
+            Linked_StrongPtr pStrongInt( new Counted );
+            pWeakInt = pStrongInt;
+            assert( Counted::ExtraConstructions() );
+            assert( Counted::GetCtorCount() == ctorCount + 3 );
+            assert( Counted::GetDtorCount() == dtorCount + 2 );
+        }
+        assert( Counted::AllDestroyed() );
+        assert( Counted::GetCtorCount() == ctorCount + 3 );
+        assert( Counted::GetDtorCount() == dtorCount + 3 );
+    }
+}
 
 // ----------------------------------------------------------------------------
 
@@ -1062,3 +1185,39 @@ void DoStrongCompareTests( void )
 }
 
 // ----------------------------------------------------------------------------
+
+
+// GCC bug
+// http://gcc.gnu.org/bugzilla/show_bug.cgi?id=38579
+
+struct Policy
+{
+protected:
+	Policy() {}
+	Policy(const Policy&) {}
+	int i;
+};
+
+template<int I, class P>
+struct BugGcc :
+	//protected P
+	public P
+{
+	BugGcc() {}
+
+	template<int I2, class P2>
+	BugGcc(const BugGcc<I2, P2>& t) : P(t) {}
+};
+
+void foo()
+{
+	BugGcc<0, Policy> f1;
+	BugGcc<1, Policy> f2(f1);
+
+	// Policy members are still not public,
+	// this will not compile:
+	//int i = f1.i;
+}
+
+
+

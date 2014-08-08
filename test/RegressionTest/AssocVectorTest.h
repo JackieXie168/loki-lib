@@ -13,11 +13,12 @@
 #ifndef ASSOCVECTORTEST_H
 #define ASSOCVECTORTEST_H
 
-// $Id: AssocVectorTest.h 760 2006-10-17 20:36:13Z syntheticpp $
+// $Id: AssocVectorTest.h 897 2008-08-08 22:53:19Z syntheticpp $
 
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <loki/AssocVector.h>
 #include "UnitTest.h"

@@ -8,7 +8,7 @@
 // for any purpose. It is provided "as is" without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: DeletableSingleton.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+// $Id: DeletableSingleton.cpp 823 2007-05-08 10:48:40Z lfittl $
 
 
 // Show an example of a Loki policy that uses DeletableSingleton.
@@ -40,7 +40,7 @@ public:
     LogClass()
     {
         print("LogClass::LogClass()");
-    };
+    }
     ~LogClass()
     {
         print("LogClass::~LogClass()");

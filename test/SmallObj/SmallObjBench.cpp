@@ -11,7 +11,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: SmallObjBench.cpp 808 2007-02-25 13:08:45Z syntheticpp $
+// $Id: SmallObjBench.cpp 824 2007-05-09 00:57:06Z rich_sposato $
 
 
 // ----------------------------------------------------------------------------
@@ -273,8 +273,6 @@ template<
 >
 void testSize()
 {
-
-//#define LOKI_ALLOCATOR_PARAMETERS ::Loki::SingleThreaded, 4096, 128, 4, Loki::NoDestroy
 
     typedef Base<Size, void> A;
     typedef Base<Size, Loki::SmallObject< ThreadingModel, chunkSize,

@@ -10,7 +10,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: main.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+// $Id: main.cpp 823 2007-05-08 10:48:40Z lfittl $
 
 
 #define LOKI_CLASS_LEVEL_THREADING
@@ -33,7 +33,7 @@ int loop = 5;
 
 struct A
 {
-    A(){};
+    A(){}
 
 #define  DO for(int i=0; i<10000000; i++) g++;
 

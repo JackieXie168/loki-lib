@@ -13,17 +13,19 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: SmallObj.cpp 756 2006-10-17 20:05:42Z syntheticpp $
+// $Id: SmallObj.cpp 823 2007-05-08 10:48:40Z lfittl $
 
 
 #include <loki/SmallObj.h>
 
 #include <cassert>
+#include <climits>
 #include <vector>
 #include <bitset>
 
 //#define DO_EXTRA_LOKI_TESTS
 //#define USE_NEW_TO_ALLOCATE
+//#define LOKI_CHECK_FOR_CORRUPTION
 
 #ifdef DO_EXTRA_LOKI_TESTS
     #include <iostream>
@@ -870,6 +872,13 @@ void * FixedAllocator::Allocate( void )
     // prove either emptyChunk_ points nowhere, or points to a truly empty Chunk.
     assert( ( NULL == emptyChunk_ ) || ( emptyChunk_->HasAvailable( numBlocks_ ) ) );
     assert( CountEmptyChunks() < 2 );
+#ifdef LOKI_CHECK_FOR_CORRUPTION
+    if ( allocChunk_->IsCorrupt( numBlocks_, blockSize_, true ) )
+    {
+        assert( false );
+        return NULL;
+    }
+#endif
 
     return place;
 }

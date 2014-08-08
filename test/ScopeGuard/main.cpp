@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // The Loki Library
-// Copyright (c) 2006 Peter Kümmel
+// Copyright (c) 2006 Peter Kï¿½mmel
 // Permission to use, copy, modify, distribute and sell this software for any 
 //     purpose is hereby granted without fee, provided that the above copyright 
 //     notice appear in all copies and that both that copyright notice and this 
@@ -10,7 +10,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: main.cpp 800 2006-12-22 01:08:21Z rich_sposato $
+// $Id: main.cpp 895 2008-08-08 22:06:26Z syntheticpp $
 
 
 #include <loki/ScopeGuard.h>
@@ -200,7 +200,13 @@ void User::AddFriendGuardedMacros(User&)
 		&User::CheckIfValid, __FUNCTION__, __LINE__ );
 	(void)invariantGuard;
     LOKI_ON_BLOCK_EXIT_OBJ(friends_, &UserCont::pop_back); (void) LOKI_ANONYMOUS_VARIABLE(scopeGuard);
+    // GCC 4.2 Bug
+#if defined(__GNUC__)
+#define GCC_VERSION (__GNUC__ * 10 + __GNUC_MINOR__ * 1)
+#endif
+#if !defined(__GNUC__) || (GCC_VERSION < 42) || (GCC_VERSION > 42)
     LOKI_ON_BLOCK_EXIT(Decrement, Loki::ByRef(fCount)); (void) LOKI_ANONYMOUS_VARIABLE(scopeGuard);
+#endif
 }
 
 void DoStandaloneFunctionTests()

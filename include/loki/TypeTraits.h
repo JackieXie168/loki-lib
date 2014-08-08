@@ -15,7 +15,7 @@
 #ifndef LOKI_TYPETRAITS_INC_
 #define LOKI_TYPETRAITS_INC_
 
-// $Id: TypeTraits.h 749 2006-10-17 19:49:26Z syntheticpp $
+// $Id: TypeTraits.h 835 2007-08-02 19:39:02Z syntheticpp $
 
 
 #include "Typelist.h"
@@ -2033,7 +2033,7 @@ namespace Loki
 // class template TypeTraits
 //
 // Figures out at compile time various properties of any given type
-// Invocations (T is a type, TypeTraits<T>::Propertie):
+// Invocations (T is a type, TypeTraits<T>::Property):
 //
 // - isPointer       : returns true if T is a pointer type
 // - PointeeType     : returns the type to which T points if T is a pointer 
@@ -2062,7 +2062,7 @@ namespace Loki
 // - NonVolatileType : Type with removed 'volatile' qualifier from T, if any
 // - UnqualifiedType : Type with removed 'const' and 'volatile' qualifiers from 
 //                     T, if any
-// - ConstParameterType: returns the optimal type to be used as a parameter 
+// - ParameterType   : returns the optimal type to be used as a parameter 
 //                       for functions that take 'const T's
 //
 ////////////////////////////////////////////////////////////////////////////////

@@ -12,7 +12,7 @@
 #ifndef LOKI_TEST_TIMER_H
 #define LOKI_TEST_TIMER_H
 
-// $Id: timer.h 761 2006-10-17 20:48:18Z syntheticpp $
+// $Id: timer.h 823 2007-05-08 10:48:40Z lfittl $
 
 
 #include <ctime>
@@ -27,7 +27,7 @@ public:
     Timer()
     {
         t100 = 0;
-    };
+    }
 
     void start()
     {

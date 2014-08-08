@@ -10,7 +10,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: main.cpp 805 2007-01-13 01:47:23Z rich_sposato $
+// $Id: main.cpp 897 2008-08-08 22:53:19Z syntheticpp $
 
 
 // ----------------------------------------------------------------------------
@@ -18,6 +18,7 @@
 #include <loki/SmartPtr.h>
 
 #include <iostream>
+#include <cstring>
 
 #include "base.h"
 
@@ -26,6 +27,7 @@
 using namespace std;
 using namespace Loki;
 
+extern void DoWeakLeakTest( void );
 extern void DoStrongRefCountTests( void );
 extern void DoStrongRefLinkTests( void );
 extern void DoStrongReleaseTests( void );
@@ -47,11 +49,8 @@ unsigned int MimicCOM::s_destructions = 0;
 // ----------------------------------------------------------------------------
 
 /// Used to check if SmartPtr can be used with a forward-reference.
+/// GCC gives out warnings because of it, you can ignore them.
 class Thingy;
-
-#ifdef __GNUC__
-#warning The warnings are by design: Check if SmartPtr can be used with a forward-reference.
-#endif
 
 typedef Loki::SmartPtr< Thingy, RefCounted, DisallowConversion,
     AssertCheck, DefaultSPStorage, PropagateConst >
@@ -1000,16 +999,17 @@ void DoForwardReferenceTest( void )
 }
 
 
-int main( unsigned int argc, const char * argv[] )
+int main( int argc, const char * argv[] )
 {
     bool doThreadTest = false;
-    for ( unsigned int ii = 1; ii < argc; ++ii )
+    for ( int ii = 1; ii < argc; ++ii )
     {
         if ( ::strcmp( argv[ii], "-t" ) == 0 )
             doThreadTest = true;
     }
 
     DoRefLinkTests();
+    DoWeakLeakTest();
     DoStrongRefCountTests();
     DoStrongReleaseTests();
     DoStrongReleaseTests();

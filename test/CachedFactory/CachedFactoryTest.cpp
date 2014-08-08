@@ -18,13 +18,14 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: CachedFactoryTest.cpp 809 2007-02-25 14:34:30Z syntheticpp $
+// $Id: CachedFactoryTest.cpp 897 2008-08-08 22:53:19Z syntheticpp $
 
 
 #define USE_SEQUENCE
 
 #include <cassert>
 #include <iostream>
+#include <cstring>
 #include <loki/Factory.h>
 
 #ifdef LOKI_DISABLE_TYPELIST_MACROS
@@ -72,7 +73,7 @@ using namespace Loki;
 
 class AbstractProduct{
 public:
-    virtual ~AbstractProduct(){};
+    virtual ~AbstractProduct(){}
 };
  
 class Product : public AbstractProduct

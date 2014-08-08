@@ -10,7 +10,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: StrongPtr.cpp 807 2007-02-25 12:49:19Z syntheticpp $
+// $Id: StrongPtr.cpp 819 2007-03-07 00:30:12Z rich_sposato $
 
 
 #include <loki/StrongPtr.h>
