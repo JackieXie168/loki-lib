@@ -1,0 +1,59 @@
+不論是《C++設計新思維》（Modern C++ Design）的讀者，
+或單純只是 Loki library 的潛在用戶或技術觀察者，
+都苦於一個事實：這套 library 的技術和想法太先進（前衛）了，
+以至於很難找到編譯器能夠全數吃下它們（當然，這是編譯器廠商的問題）。
+雖然本書前言之中作者曾經列出兩個可用的編譯器：
+Metrowerks CodeWarrior Pro 6.0 和 
+Comeau C++ 4.2.38，但它們都不是主流編譯器，大部份人手上都沒有它們。
+
+如果你到 SouceForge http://sourceforge.net/projects/loki-lib/ 
+下載一份 Loki implementation，你可以看到有許多人在不同的（主流）
+編譯器上對 Loki 做出調整版本。這是一份好的資源。
+
+我自己，看到那麼多 CVS 版本，想到得將自己融入不同版本的
+（不知哪個地方的修改）之中，頭都大了。為了把時間花在自己
+感興趣的事上頭，也為了提昇自己的技術，我決定親手調一份「侯捷版本」，
+同時也為每一章寫下一些測試程式。
+
+這裡開放我的成果。這些成果一方面堅實我自己對《C++設計新思維》和 
+Loki library 的掌握，一方面是給《C++設計新思維》讀者一份紅利 :)
+
+所謂「侯捷調整版」是以當初（精確日期已忘）從 Andrei 網站下載的版本
+（Last update: February 19, 2001）為根據，就我自己感興趣的主題
+（佔 Loki 面積大部份，但非全部），略加修改，使能通過至少一個主流編譯器
+（我的最終選擇是 GNU C++）。為了方便以後更多的調整和測試，我保留了
+調整過程中的一些測試代碼（但可能 remark 起來）。我把所有檔案名稱都
+後綴以 -jj，以便與正宗 Loki 有所區別，避免誤用。namespace 仍沿用 "Loki"。
+
+這份版本可通過 
+GNU-C++ 2.95.3-5 (Cygwin special,20010316) 和 
+GNU-C++ 3.2 (MinGW-2.0.0-3,special 20020817-1)
+
+
+TypeInfo-jj.h
+TypeList-jj.h
+TypeManip-jj.h
+TypeTraits-jj.h
+EmptyType-jj.h
+NullType-jj.h
+SmallObj-jj.h
+SmallObj-jj.cpp
+Functor-jj.h
+Singleton-jj.cpp
+Singleton-jj.h
+SmartPtr-jj.h
+Factory-jj.h
+AbstractFactory-jj.h
+MultiMethods-jj.h
+Threads-jj.h
+
+ch01test.cpp
+ch02test.cpp
+ch03test.cpp
+ch04test.cpp
+ch05test.cpp
+ch06test.cpp
+ch07test.cpp
+ch08test.cpp
+ch09test.cpp
+ch11test.cpp
