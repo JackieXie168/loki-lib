@@ -13,7 +13,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/SmallObj.h,v 1.11 2005/09/27 00:41:13 rich_sposato Exp $
+// $Header: /cvsroot/loki-lib/loki/include/loki/SmallObj.h,v 1.15 2005/10/15 19:41:23 syntheticpp Exp $
 
 
 #ifndef LOKI_SMALLOBJ_INC_
@@ -59,7 +59,8 @@ namespace Loki
 
         /** Destructor releases all blocks, all Chunks, and FixedAllocator's.
          Any outstanding blocks are unavailable, and should not be used after
-         this destructor is called.
+         this destructor is called.  The destructor is deliberately non-virtual
+         because it is protected, not public.
          */
         ~SmallObjAllocator( void );
 
@@ -143,18 +144,20 @@ namespace Loki
         std::size_t objectAlignSize_;
     };
 
+
     /** @class AllocatorSingleton This template class is derived from
-    SmallObjAllocator in order to pass template arguments into it, and still
-    have a default constructor for the singleton.  Each instance is a unique
-    combination of all the template parameters, and hence is singleton only 
-    with respect to those parameters.  The template parameters have default
-    values and the class has typedefs identical to both SmallObject and
-    SmallValueObject so that this class can be used directly instead of going
-    through SmallObject or SmallValueObject.  That design feature allows
-    clients to use the new_handler without having the name of the new_handler
-    function show up in classes derived from SmallObject or SmallValueObject.
-    Thus, the only functions in the allocator which show up in SmallObject or
-    SmallValueObject inheritance heierarchies are the new and delete operators.
+     SmallObjAllocator in order to pass template arguments into it, and still
+     have a default constructor for the singleton.  Each instance is a unique
+     combination of all the template parameters, and hence is singleton only 
+     with respect to those parameters.  The template parameters have default
+     values and the class has typedefs identical to both SmallObject and
+     SmallValueObject so that this class can be used directly instead of going
+     through SmallObject or SmallValueObject.  That design feature allows
+     clients to use the new_handler without having the name of the new_handler
+     function show up in classes derived from SmallObject or SmallValueObject.
+     Thus, the only functions in the allocator which show up in SmallObject or
+     SmallValueObject inheritance heierarchies are the new and delete
+     operators.
     */
     template
     <
@@ -226,11 +229,69 @@ namespace Loki
     }
 
 
+    /** This standalone function provides the longevity level for Small-Object
+     Allocators which use the Loki::SingletonWithLongevity policy.  The
+     SingletonWithLongevity class can find this function through argument-
+     dependent lookup.
+
+     @par Longevity Levels
+     No Small-Object Allocator depends on any other Small-Object allocator, so
+     this does not need to calculate dependency levels among allocators, and
+     it returns just a constant.  All allocators must live longer than the
+     objects which use the allocators, it must return a longevity level higher
+     than any such object.
+     */
+    template
+    <
+        template <class> class TM,
+        std::size_t CS,
+        std::size_t MSOS,
+        std::size_t OAS,
+        template <class> class LP
+    >
+    inline unsigned int GetLongevity(
+        AllocatorSingleton< TM, CS, MSOS, OAS, LP > * )
+    {
+        // Returns highest possible value.
+        return 0xFFFFFFFF;
+    }
+
+
     /** @class SmallObjectBase Base class for small object allocation classes.
      The shared implementation of the new and delete operators are here instead
      of being duplicated in both SmallObject or SmallValueObject.  This class
      is not meant to be used directly by clients, or derived from by clients.
      Class has no data members so compilers can use Empty-Base-Optimization.
+
+     @par Singleton Lifetime Policies and Small-Object Allocator
+     At this time, the only Singleton Lifetime policies recommended for
+     use with the Small-Object Allocator are Loki::SingletonWithLongevity and
+     Loki::NoDestroy.  The Loki::DefaultLifetime and Loki::PhoenixSingleton
+     policies are *not* recommended since they can cause the allocator to be
+     destroyed and release memory for singletons which inherit from either
+     SmallObject or SmallValueObject.  The default is Loki::NoDestroy to
+     insure that memory is never released before the object using that
+     memory is destroyed.  Loki::SingletonWithLongevity can also insure that
+     no memory is released before the owning object is destroyed, and also
+     insure that any memory controlled by a Small-Object Allocator is
+     released.
+
+     @par Small Singletons and Lifetime Policies
+     If you a singleton is derived from SmallValueObject or SmallObject, you
+     have to use compatible lifetime policies for both the singleton and the
+     allocator.  The 3 possible options are:
+     - They may both be Loki::NoDestroy.  Since neither is ever destroyed, the
+       destruction order does not matter.
+     - They may both be Loki::SingletonWithLongevity as long as the longevity
+       level for the singleton is lower than that for the allocator.  This is
+       why the allocator's GetLongevity function returns the highest value.
+     - The singleton may use Loki::SingletonWithLongevity, and the allocator
+       may use Loki::NoDestroy.  This is why the allocator's default policy is
+       Loki::NoDestroy.
+     You should *not* use Loki::NoDestroy for the singleton, and then use
+     Loki::SingletonWithLongevity for the allocator.  This causes the allocator
+     to be destroyed and release the memory for the singleton while the
+     singleton is still alive.
      */
     template
     <
@@ -247,7 +308,7 @@ namespace Loki
 
         /// Defines type of allocator.
         typedef AllocatorSingleton< ThreadingModel, chunkSize,
-            maxSmallObjectSize, objectAlignSize > MyAllocator;
+            maxSmallObjectSize, objectAlignSize, LifetimePolicy > MyAllocator;
 
         /// Defines type for thread-safety locking mechanism.
         typedef ThreadingModel< MyAllocator > MyThreadingModel;
@@ -442,6 +503,19 @@ namespace Loki
 // Nov. 26, 2004: re-implemented by Rich Sposato.
 //
 // $Log: SmallObj.h,v $
+// Revision 1.15  2005/10/15 19:41:23  syntheticpp
+// fix bug 1327060. Add missing template parameter to make different static variables possible
+//
+// Revision 1.14  2005/10/13 22:43:03  rich_sposato
+// Added documentation comments about lifetime policies.
+//
+// Revision 1.13  2005/10/07 01:22:09  rich_sposato
+// Added GetLongevity function so allocator can work with a certain lifetime
+// policy class used with Loki::SingletonHolder.
+//
+// Revision 1.12  2005/10/06 00:19:56  rich_sposato
+// Added clarifying comment about destructor.
+//
 // Revision 1.11  2005/09/27 00:41:13  rich_sposato
 // Added array forms of new and delete.
 //

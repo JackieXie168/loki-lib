@@ -52,7 +52,7 @@ namespace Loki
             static bool Compare(const LifetimeTracker* lhs,
                 const LifetimeTracker* rhs)
             {
-                return lhs->longevity_ < rhs->longevity_;
+                return lhs->longevity_ > rhs->longevity_;
             }
             
         private:
@@ -71,6 +71,7 @@ namespace Loki
         template <typename T>
         struct Deleter
         {
+            typedef void (*Type)(T*);
             static void Delete(T* pObj)
             { delete pObj; }
         };
@@ -105,7 +106,7 @@ namespace Loki
 
     template <typename T, typename Destroyer>
     void SetLongevity(T* pDynObject, unsigned int longevity,
-        Destroyer d = Private::Deleter<T>::Delete)
+        Destroyer d)
     {
         using namespace Private;
         
@@ -137,6 +138,13 @@ namespace Loki
         std::atexit(Private::AtExitFn);
     }
 
+    template <typename T>
+    void SetLongevity(T* pDynObject, unsigned int longevity,
+        typename Private::Deleter<T>::Type d = Private::Deleter<T>::Delete)
+    {
+        SetLongevity<T, typename Private::Deleter<T>::Type>(pDynObject, longevity, d);
+    }
+    
 ////////////////////////////////////////////////////////////////////////////////
 // class template CreateUsingNew
 // Implementation of the CreationPolicy used by SingletonHolder
@@ -186,11 +194,13 @@ namespace Loki
 
     template <class T> struct CreateStatic
     {
-#if defined(_MSC_VER) && _MSC_VER >= 1300
+        
+#ifdef _MSC_VER
 #pragma warning( push ) 
- // alignment of a member was sensitive to packing
 #pragma warning( disable : 4121 )
+// alignment of a member was sensitive to packing
 #endif // _MSC_VER
+
         union MaxAlign
         {
             char t_[sizeof(T)];
@@ -204,7 +214,8 @@ namespace Loki
             int Test::* pMember_;
             int (Test::*pMemberFn_)(int);
         };
-#if defined(_MSC_VER) && _MSC_VER >= 1300
+        
+#ifdef _MSC_VER
 #pragma warning( pop )
 #endif // _MSC_VER
         
@@ -272,7 +283,76 @@ namespace Loki
 #ifndef ATEXIT_FIXED
     template <class T> bool PhoenixSingleton<T>::destroyedOnce_ = false;
 #endif
+
+////////////////////////////////////////////////////////////////////////////////
+// class template DeletableSingleton
+// Copyright (c) 2004 by Curtis Krauskopf - curtis@decompile.com
+//
+// A DeletableSingleton allows the instantiated singleton to be 
+// destroyed at any time. The singleton can be reinstantiated at 
+// any time, even during program termination.
+// If the singleton exists when the program terminates, it will 
+// be automatically deleted.
+//
+// The singleton can be deleted manually:
+// DeletableSingleton<MyClass>::GracefulDelete();
+////////////////////////////////////////////////////////////////////////////////
         
+    template <class T>
+    class DeletableSingleton
+    {
+    public:
+
+        static void ScheduleDestruction(T*, atexit_pfn_t pFun)
+        {
+            static bool firstPass = true;
+            isDead = false;
+            deleter = pFun;
+            if (firstPass || needCallback)
+            {
+                std::atexit(atexitCallback);
+                firstPass = false;
+                needCallback = false;
+            }
+        }
+    
+        static void OnDeadReference()
+        { 
+        }
+    
+        static void GracefulDelete()
+        {
+            if (isDead)
+                return;
+            isDead = true;
+            deleter();
+        }
+    
+    protected:
+        static atexit_pfn_t deleter;
+        static bool isDead;
+        static bool needCallback;
+        
+        static void atexitCallback()
+        {
+#ifdef ATEXIT_FIXED
+            needCallback = true;
+#else
+            needCallback = false;
+#endif
+            GracefulDelete();
+        }
+    };
+    
+    template <class T>
+    atexit_pfn_t DeletableSingleton<T>::deleter = 0;
+    
+    template <class T>
+    bool DeletableSingleton<T>::isDead = true;
+    
+    template <class T>
+    bool DeletableSingleton<T>::needCallback = true;
+
 ////////////////////////////////////////////////////////////////////////////////
 // class template Adapter
 // Helper for SingletonWithLongevity below
@@ -424,8 +504,8 @@ namespace Loki
         {
             if (destroyed_)
             {
-                LifetimePolicy<T>::OnDeadReference();
                 destroyed_ = false;
+                LifetimePolicy<T>::OnDeadReference();
             }
             pInstance_ = CreationPolicy<T>::Create();
             LifetimePolicy<T>::ScheduleDestruction(pInstance_, 

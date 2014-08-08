@@ -13,15 +13,20 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/src/SmallObj.cpp,v 1.7 2005/09/27 00:40:30 rich_sposato Exp $
+// $Header: /cvsroot/loki-lib/loki/src/SmallObj.cpp,v 1.14 2005/10/17 18:06:13 rich_sposato Exp $
 
 
 #include "../include/loki/SmallObj.h"
 
 #include <cassert>
 #include <vector>
-#include <algorithm>
-#include <functional>
+
+//#define DO_EXTRA_LOKI_TESTS
+
+#ifdef DO_EXTRA_LOKI_TESTS
+    #include <iostream>
+    #include <bitset>
+#endif
 
 
 using namespace Loki;
@@ -31,7 +36,9 @@ namespace Loki
 {
 
     /** @struct Chunk Contains info about each allocated Chunk.
-     This is a POD-style struct with value-semantics.
+     This is a POD-style struct with value-semantics.  All functions and data
+     are private so that they can not be changed by anything other than the
+     FixedAllocator which owns the Chunk.
 
      @par Minimal Interface
      For the sake of runtime efficiency, no constructor, destructor, or
@@ -57,8 +64,11 @@ namespace Loki
      than blocksAvailable_.  Much of the allocator's time and space efficiency
      comes from how these stealth indexes are implemented.
      */
-    struct Chunk
+    class Chunk
     {
+    private:
+        friend class FixedAllocator;
+
         /** Initializes a just-constructed Chunk.
          @param blockSize Number of bytes per block.
          @param blocks Number of blocks per Chunk.
@@ -93,6 +103,8 @@ namespace Loki
 
         /// Releases the allocated block of memory.
         void Release();
+
+        bool IsCorrupt( unsigned char numBlocks, std::size_t blockSize ) const;
 
         /// Returns true if block at address P is inside this Chunk.
         inline bool HasBlock( unsigned char * p, std::size_t chunkLength ) const
@@ -315,14 +327,61 @@ void Chunk::Deallocate(void* p, std::size_t blockSize)
     unsigned char* toRelease = static_cast<unsigned char*>(p);
     // Alignment check
     assert((toRelease - pData_) % blockSize == 0);
+    unsigned char index = static_cast< unsigned char >(
+        ( toRelease - pData_ ) / blockSize);
+
+#if defined(DEBUG) || defined(_DEBUG)
+    // Check if block was already deleted.  Attempting to delete the same
+    // block more than once causes Chunk's linked-list of stealth indexes to
+    // become corrupt.  And causes count of blocksAvailable_ ) to be wrong.
+    if ( 0 < blocksAvailable_ )
+        assert( firstAvailableBlock_ != index );
+#endif
 
     *toRelease = firstAvailableBlock_;
-    firstAvailableBlock_ = static_cast<unsigned char>(
-        (toRelease - pData_) / blockSize);
+    firstAvailableBlock_ = index;
     // Truncation check
     assert(firstAvailableBlock_ == (toRelease - pData_) / blockSize);
 
     ++blocksAvailable_;
+}
+
+// Chunk::IsCorrupt -----------------------------------------------------------
+
+bool Chunk::IsCorrupt( unsigned char numBlocks, std::size_t blockSize ) const
+{
+
+    if ( numBlocks < blocksAvailable_ ) return true;
+    if ( 0 == blocksAvailable_ ) return false;
+    unsigned char index = firstAvailableBlock_;
+    if ( numBlocks <= index ) return true;
+
+#ifdef DO_EXTRA_LOKI_TESTS
+    std::bitset< 256 > foundBlocks;
+    unsigned char * nextBlock = NULL;
+
+    unsigned char cc = 0;
+    for ( ;; )
+    {
+        nextBlock = pData_ + ( index * blockSize );
+        foundBlocks.set( index, true );
+        ++cc;
+        if ( cc >= blocksAvailable_ )
+            break;
+        index = *nextBlock;
+        if ( numBlocks <= index )
+            return true;
+        if ( foundBlocks.test( index ) )
+            return true;
+    }
+    if ( foundBlocks.count() != blocksAvailable_ )
+        return false;
+
+#else
+    (void)blockSize; // cast as void to make warning go away.
+#endif
+
+    return false;
 }
 
 // FixedAllocator::FixedAllocator ---------------------------------------------
@@ -414,9 +473,7 @@ bool FixedAllocator::TrimEmptyChunk( void )
     assert( lastChunk->HasAvailable( numBlocks_ ) );
     lastChunk->Release();
     chunks_.pop_back();
-    emptyChunk_ = NULL;
 
-    assert( 0 == CountEmptyChunks() );
     if ( chunks_.empty() )
     {
         allocChunk_ = NULL;
@@ -435,6 +492,9 @@ bool FixedAllocator::TrimEmptyChunk( void )
             assert( allocChunk_->blocksAvailable_ < numBlocks_ );
         }
     }
+
+    emptyChunk_ = NULL;
+    assert( 0 == CountEmptyChunks() );
 
     return true;
 }
@@ -507,16 +567,16 @@ void * FixedAllocator::Allocate( void )
     else if ( allocChunk_ == emptyChunk_)
         // detach emptyChunk_ from allocChunk_, because after 
         // calling allocChunk_->Allocate(blockSize_); the chunk 
-        // isn't any more empty
+        // is no longer empty.
         emptyChunk_ = NULL;
 
     assert( allocChunk_ != NULL );
     assert( !allocChunk_->IsFilled() );
-    void *place = allocChunk_->Allocate(blockSize_);
+    void * place = allocChunk_->Allocate( blockSize_ );
 
-    // prove emptyChunk_ points nowhere.
-    assert( NULL == emptyChunk_ );
-    assert( 0 == CountEmptyChunks() );
+    // prove either emptyChunk_ points nowhere, or points to a truly empty Chunk.
+    assert( ( NULL == emptyChunk_ ) || ( emptyChunk_->HasAvailable( numBlocks_ ) ) );
+    assert( CountEmptyChunks() < 2 );
 
     return place;
 }
@@ -538,6 +598,7 @@ bool FixedAllocator::Deallocate( void * p, Chunk * hint )
 
     assert( foundChunk->HasBlock( static_cast< unsigned char * >( p ),
         numBlocks_ * blockSize_ ) );
+    assert( !foundChunk->IsCorrupt( numBlocks_, blockSize_ ) );
     deallocChunk_ = foundChunk;
     DoDeallocate(p);
     assert( CountEmptyChunks() < 2 );
@@ -622,7 +683,8 @@ void FixedAllocator::DoDeallocate(void* p)
             assert( lastChunk->HasAvailable( numBlocks_ ) );
             lastChunk->Release();
             chunks_.pop_back();
-            allocChunk_ = deallocChunk_;
+            if ( ( allocChunk_ == lastChunk ) || allocChunk_->IsFilled() ) 
+                allocChunk_ = deallocChunk_;
         }
         emptyChunk_ = deallocChunk_;
     }
@@ -684,6 +746,9 @@ SmallObjAllocator::SmallObjAllocator( std::size_t pageSize,
     maxSmallObjectSize_( maxObjectSize ),
     objectAlignSize_( objectAlignSize )
 {
+#ifdef DO_EXTRA_LOKI_TESTS
+    std::cout << "SmallObjAllocator " << this << std::endl;
+#endif
     assert( 0 != objectAlignSize );
     const std::size_t allocCount = GetOffset( maxObjectSize, objectAlignSize );
     pool_ = new FixedAllocator[ allocCount ];
@@ -695,6 +760,9 @@ SmallObjAllocator::SmallObjAllocator( std::size_t pageSize,
 
 SmallObjAllocator::~SmallObjAllocator( void )
 {
+#ifdef DO_EXTRA_LOKI_TESTS
+    std::cout << "~SmallObjAllocator " << this << std::endl;
+#endif
     delete [] pool_;
 }
 
@@ -811,6 +879,26 @@ void SmallObjAllocator::Deallocate( void * p )
 ////////////////////////////////////////////////////////////////////////////////
 
 // $Log: SmallObj.cpp,v $
+// Revision 1.14  2005/10/17 18:06:13  rich_sposato
+// Removed unneeded include statements.  Changed lines that check for corrupt
+// Chunk.  Changed assertions when allocating.
+//
+// Revision 1.13  2005/10/17 09:44:00  syntheticpp
+// remove debug code
+//
+// Revision 1.12  2005/10/17 08:07:23  syntheticpp
+// gcc patch
+//
+// Revision 1.11  2005/10/15 00:41:36  rich_sposato
+// Added tests for corrupt Chunk.  Added cout statements for debugging - and
+// these are inside a #ifdef block.
+//
+// Revision 1.10  2005/10/14 23:16:23  rich_sposato
+// Added check for already deleted block.  Made Chunk members private.
+//
+// Revision 1.9  2005/10/13 22:55:46  rich_sposato
+// Added another condition to if statement for allocChunk_.
+//
 // Revision 1.7  2005/09/27 00:40:30  rich_sposato
 // Moved Chunk out of FixedAllocator class so I could improve efficiency for
 // SmallObjAllocator::Deallocate.

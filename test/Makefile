@@ -4,8 +4,11 @@ MAKEFILE = Makefile
 SUBTARGETS	= \
 		sub-Factory \
 		sub-flex_string \
+		sub-Longevity \
+		sub-OrderedStatic \
 		sub-RegressionTest \
 		sub-SafeFormat \
+		sub-Singleton \
 		sub-SmallObj 
 
 all: $(SUBTARGETS)
@@ -30,9 +33,27 @@ sub-SafeFormat: FORCE
 	$(MAKE) -f $(MAKEFILE)
 	@cd ..
 
+sub-Singleton: FORCE
+	cd Singleton && \
+	$(MAKE) -f $(MAKEFILE)-DeletableSingleton && \
+	$(MAKE) -f $(MAKEFILE)-Phoenix 
+	@cd ..
+	
 sub-SmallObj: FORCE
 	cd SmallObj && \
+	$(MAKE) -f $(MAKEFILE) && \
+	$(MAKE) -f $(MAKEFILE)-SmallSingleton
+	@cd ..
+	
+sub-OrderedStatic: FORCE
+	cd OrderedStatic && \
 	$(MAKE) -f $(MAKEFILE)
+	@cd ..
+	
+sub-Longevity: FORCE
+	cd Longevity && \
+	$(MAKE) -f $(MAKEFILE) && \
+	$(MAKE) -f $(MAKEFILE)2
 	@cd ..
 	
 clean: 
@@ -40,6 +61,12 @@ clean:
 	$(MAKE) -f $(MAKEFILE) clean
 	@cd ..
 	cd flex_string && \
+	$(MAKE) -f $(MAKEFILE) clean
+	@cd ..
+	cd Longevity && \
+	$(MAKE) -f $(MAKEFILE) clean
+	@cd ..
+	cd OrderedStatic && \
 	$(MAKE) -f $(MAKEFILE) clean
 	@cd ..
 	cd RegressionTest && \
@@ -51,7 +78,6 @@ clean:
 	cd SmallObj && \
 	$(MAKE) -f $(MAKEFILE) clean
 	@cd ..
-
 
 
 
