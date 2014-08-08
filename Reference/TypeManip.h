@@ -68,6 +68,27 @@ namespace Loki
     };
     
 ////////////////////////////////////////////////////////////////////////////////
+// class template IsSameType
+// Return true iff two given types are the same
+// Invocation: SameType<T, U>::value
+// where:
+// T and U are types
+// Result evaluates to true iff U == T (types equal)
+////////////////////////////////////////////////////////////////////////////////
+
+    template <typename T, typename U>
+    struct IsSameType
+    {
+        enum { value = false };
+    };
+    
+    template <typename T>
+    struct IsSameType<T,T>
+    {
+        enum { value = true };
+    };
+
+////////////////////////////////////////////////////////////////////////////////
 // Helper types Small and Big - guarantee that sizeof(Small) < sizeof(Big)
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -128,16 +149,15 @@ namespace Loki
     template <class T>
     struct Conversion<T, void>    
     {
-        enum { exists = 1, exists2Way = 0, sameType = 0 };
+        enum { exists = 0, exists2Way = 0, sameType = 0 };
     };
     
     template <>
-    class Conversion<void, void>    
+    struct Conversion<void, void>    
     {
     public:
         enum { exists = 1, exists2Way = 1, sameType = 1 };
     };
-}   // namespace Loki
 
 ////////////////////////////////////////////////////////////////////////////////
 // class template SuperSubclass
@@ -156,20 +176,6 @@ struct SuperSubclass
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// macro SUPERSUBCLASS
-// Invocation: SUPERSUBCLASS(B, D) where B and D are types. 
-// Returns true if B is a public base of D, or if B and D are aliases of the 
-// same type.
-//
-// Caveat: might not work if T and U are in a private inheritance hierarchy.
-// Deprecated: Use SuperSubclass class template instead.
-////////////////////////////////////////////////////////////////////////////////
-
-#define SUPERSUBCLASS(T, U) \
-    (::Loki::Conversion<const volatile U*, const volatile T*>::exists && \
-    !::Loki::Conversion<const volatile T*, const volatile void*>::sameType)
-
-////////////////////////////////////////////////////////////////////////////////
 // class template SuperSubclassStrict
 // Invocation: SuperSubclassStrict<B, D>::value where B and D are types. 
 // Returns true if B is a public base of D.
@@ -185,6 +191,21 @@ struct SuperSubclassStrict
                  !::Loki::Conversion<const volatile T*, const volatile U*>::sameType) };
 };
 
+}   // namespace Loki
+
+////////////////////////////////////////////////////////////////////////////////
+// macro SUPERSUBCLASS
+// Invocation: SUPERSUBCLASS(B, D) where B and D are types. 
+// Returns true if B is a public base of D, or if B and D are aliases of the 
+// same type.
+//
+// Caveat: might not work if T and U are in a private inheritance hierarchy.
+// Deprecated: Use SuperSubclass class template instead.
+////////////////////////////////////////////////////////////////////////////////
+
+#define SUPERSUBCLASS(T, U) \
+    ::Loki::SuperSubclass<T,U>::value
+
 ////////////////////////////////////////////////////////////////////////////////
 // macro SUPERSUBCLASS_STRICT
 // Invocation: SUPERSUBCLASS(B, D) where B and D are types. 
@@ -195,8 +216,7 @@ struct SuperSubclassStrict
 ////////////////////////////////////////////////////////////////////////////////
 
 #define SUPERSUBCLASS_STRICT(T, U) \
-    (SUPERSUBCLASS(T, U) && \
-    !::Loki::Conversion<const volatile T*, const volatile U*>::sameType)
+    ::Loki::SuperSubclassStrict<T,U>::value
 
 ////////////////////////////////////////////////////////////////////////////////
 // Change log:

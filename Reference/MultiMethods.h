@@ -13,13 +13,11 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// Last update: June 20, 2001
-
 #ifndef MULTIMETHODS_INC_
 #define MULTIMETHODS_INC_
 
 #include "Typelist.h"
-#include "TypeInfo.h"
+#include "LokiTypeInfo.h"
 #include "Functor.h"
 #include "AssocVector.h"
 
@@ -79,13 +77,10 @@ namespace Loki
             Executor exec, NullType)
         { return exec.OnError(lhs, rhs); }
         
-        template <class TList, class SomeLhs>
+        template <class Head, class Tail, class SomeLhs>
         static ResultType DispatchRhs(SomeLhs& lhs, BaseRhs& rhs,
-            Executor exec, TList)
-        {
-            typedef typename TList::Head Head;
-            typedef typename TList::Tail Tail;
-            
+            Executor exec, Typelist<Head, Tail>)
+        {            
             if (Head* p2 = dynamic_cast<Head*>(&rhs))
             {
                 Int2Type<(symmetric &&
@@ -104,13 +99,10 @@ namespace Loki
             Executor exec, NullType)
         { return exec.OnError(lhs, rhs); }
         
-        template <class TList>
+        template <class Head, class Tail>
         static ResultType DispatchLhs(BaseLhs& lhs, BaseRhs& rhs,
-            Executor exec, TList)
-        {
-            typedef typename TList::Head Head;
-            typedef typename TList::Tail Tail;
-            
+            Executor exec, Typelist<Head, Tail>)
+        {            
             if (Head* p1 = dynamic_cast<Head*>(&lhs))
             {
                 return DispatchRhs(*p1, rhs, exec, TypesRhs());
@@ -267,7 +259,7 @@ namespace Loki
         template <class SomeLhs, class SomeRhs>
         void Add(ResultType (*pFun)(BaseLhs&, BaseRhs&))
         {
-            return backEnd_.Add<SomeLhs, SomeRhs>(pFun);
+            return backEnd_.template Add<SomeLhs, SomeRhs>(pFun);
         }        
         
         template <class SomeLhs, class SomeRhs,
@@ -288,7 +280,7 @@ namespace Loki
         template <class SomeLhs, class SomeRhs,
             ResultType (*callback)(SomeLhs&, SomeRhs&),
             bool symmetric>
-        void Add()
+        void Add(bool = true) // [gcc] dummy bool
         {
 	    typedef Private::FnDispatcherHelper<
 					BaseLhs, BaseRhs, 
@@ -308,7 +300,7 @@ namespace Loki
         template <class SomeLhs, class SomeRhs>
         void Remove()
         {
-            backEnd_.Remove<SomeLhs, SomeRhs>();
+            backEnd_.template Remove<SomeLhs, SomeRhs>();
         }
 
         ResultType Go(BaseLhs& lhs, BaseRhs& rhs)
@@ -380,7 +372,7 @@ namespace Loki
 					CastingPolicy<SomeRhs, BaseRhs>,
 					Fun, false> Adapter;
 
-            backEnd_.Add<SomeLhs, SomeRhs>(FunctorType(Adapter(fun)));
+            backEnd_.template Add<SomeLhs, SomeRhs>(FunctorType(Adapter(fun)));
 	}
         template <class SomeLhs, class SomeRhs, bool symmetric, class Fun>
         void Add(const Fun& fun)
@@ -398,14 +390,14 @@ namespace Loki
 					CastingPolicy<SomeRhs, BaseLhs>,
 					Fun, true> AdapterR;
 
-               	backEnd_.Add<SomeRhs, SomeLhs>(FunctorType(AdapterR(fun)));
+                backEnd_.template Add<SomeRhs, SomeLhs>(FunctorType(AdapterR(fun)));
 	    }
         }
         
         template <class SomeLhs, class SomeRhs>
         void Remove()
         {
-            backEnd_.Remove<SomeLhs, SomeRhs>();
+            backEnd_.template Remove<SomeLhs, SomeRhs>();
         }
 
         ResultType Go(BaseLhs& lhs, BaseRhs& rhs)
@@ -417,7 +409,8 @@ namespace Loki
 
 ////////////////////////////////////////////////////////////////////////////////
 // Change log:
-// June 20, 2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
+// June 20,    2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
+// February 2, 2003: fixed dependent names - credit due to Rani Sharoni
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif

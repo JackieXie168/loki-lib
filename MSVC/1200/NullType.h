@@ -8,12 +8,12 @@
 //     purpose is hereby granted without fee, provided that the above copyright 
 //     notice appear in all copies and that both that copyright notice and this 
 //     permission notice appear in supporting documentation.
-// The author or Addison-Wesley Longman make no representations about the 
+// The author or Addison-Welsey Longman make no representations about the 
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// Last update: November 22, 2001
+// Last update: June 20, 2001
 
 #ifndef NULLTYPE_INC_
 #define NULLTYPE_INC_
@@ -27,13 +27,11 @@ namespace Loki
 ////////////////////////////////////////////////////////////////////////////////
 
     class NullType {};
-    
-}   // namespace Loki
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Change log:
 // June 20, 2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
-// November 22, 2001: minor change to support porting to boost
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif // NULLTYPE_INC_

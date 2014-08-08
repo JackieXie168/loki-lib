@@ -143,7 +143,7 @@ struct DefaultCatchAll
         static ReturnType AcceptImpl(T& visited, BaseVisitor& guest)
         {
             // Apply the Acyclic Visitor
-            if (Visitor<T>* p = dynamic_cast<Visitor<T>*>(&guest))
+            if (Visitor<T,R>* p = dynamic_cast<Visitor<T,R>*>(&guest))
             {
                 return p->Visit(visited);
             }
@@ -158,7 +158,7 @@ struct DefaultCatchAll
 ////////////////////////////////////////////////////////////////////////////////
 
 #define DEFINE_VISITABLE() \
-    virtual ReturnType Accept(BaseVisitor& guest) \
+    virtual ReturnType Accept(Loki::BaseVisitor& guest) \
     { return AcceptImpl(*this, guest); }
 
 ////////////////////////////////////////////////////////////////////////////////

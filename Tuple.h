@@ -2,7 +2,7 @@
 // Generated header: Tuple.h
 // Forwards to the appropriate code
 // that works on the detected compiler
-// Generated on Sun Sep 15 15:31:17 2002
+// Generated on Mon Sep 30 23:14:48 2002
 /////////////////////////////
 
 #ifdef LOKI_USE_REFERENCE
@@ -14,6 +14,8 @@
 #		include "Reference/Tuple.h"
 #	elif (__BORLANDC__ >= 0x560)
 #		include "Borland/Tuple.h"
+#	elif (_MSC_VER >= 1301)
+#		include "Reference/Tuple.h"
 #	elif (_MSC_VER >= 1300)
 #		include "MSVC/1300/Tuple.h"
 #	elif (_MSC_VER >= 1200)

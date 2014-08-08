@@ -1,5 +1,6 @@
 AbstractFactory.h
 AssocVector.h
+DataGenerators.h
 EmptyType.h
 Factory.h
 Functor.h
@@ -12,7 +13,7 @@ SmartPtr.h
 static_check.h
 Threads.h
 Tuple.h
-TypeInfo.h
+LokiTypeInfo.h
 Typelist.h
 TypeManip.h
 TypeTraits.h

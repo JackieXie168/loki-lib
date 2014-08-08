@@ -301,7 +301,7 @@
         T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, \
         T21, T22, T23, T24, T25, T26, T27, T28, T29, T30, \
         T31, T32, T33, T34, T35, T36, T37, T38, T39, T40, \
-        T41, T42, T43, T44, T45) >
+        T41, T42, T43, T44, T45, T46) >
 
 #define TYPELIST_47(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, \
         T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, \
@@ -367,6 +367,47 @@ namespace Loki
 
     namespace TL
     {
+////////////////////////////////////////////////////////////////////////////////
+// class template MakeTypelist
+// Takes a number of arguments equal to its numeric suffix
+// The arguments are type names.
+// MakeTypelist<T1, T2, ...>::Result
+// returns a typelist that is of T1, T2, ...
+////////////////////////////////////////////////////////////////////////////////
+
+        template
+        <
+            typename T1  = NullType, typename T2  = NullType, typename T3  = NullType,
+            typename T4  = NullType, typename T5  = NullType, typename T6  = NullType,
+            typename T7  = NullType, typename T8  = NullType, typename T9  = NullType,
+            typename T10 = NullType, typename T11 = NullType, typename T12 = NullType,
+            typename T13 = NullType, typename T14 = NullType, typename T15 = NullType,
+            typename T16 = NullType, typename T17 = NullType, typename T18 = NullType
+        > 
+        struct MakeTypelist
+        {
+        private:
+            typedef typename MakeTypelist
+            <
+                T2 , T3 , T4 , 
+                T5 , T6 , T7 , 
+                T8 , T9 , T10, 
+                T11, T12, T13,
+                T14, T15, T16, 
+                T17, T18
+            >
+            ::Result TailResult;
+
+        public:
+            typedef Typelist<T1, TailResult> Result;
+        };
+
+        template<>
+        struct MakeTypelist<>
+        {
+            typedef NullType Result;
+        };
+
 ////////////////////////////////////////////////////////////////////////////////
 // class template Length
 // Computes the length of a typelist
@@ -742,6 +783,7 @@ namespace Loki
 //          Friedrik Hedman who fixed the bug but didn't send the fix;
 //          Kevin Cline who sent the first actual fix)
 // July     16, 2002: Ported by Terje Slettebø and Pavel Vozenilek to BCC 5.6
+// Oct      11, 2002: TYPELIST_46 was missing T46 SGB
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif // TYPELIST_INC_

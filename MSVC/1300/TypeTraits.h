@@ -15,6 +15,8 @@
 
 // Last update: May 19, 2002
 
+//TODOSGB None of the parameter types are defined inside of TypeTraits, e.g. PointeeType, ReferredType, etc...
+
 #ifndef TYPETRAITS_INC_
 #define TYPETRAITS_INC_
 
@@ -89,6 +91,40 @@ namespace Loki
         typedef TYPELIST_3(float, double, long double) StdFloats;
     }
         
+    namespace Private
+    {
+        
+        template<typename T>
+        class IsArray
+        {
+            template <typename> struct Type2Type2 {};
+
+            typedef char (&yes)[1];
+            typedef char (&no) [2];
+        
+            template<typename U, size_t N>
+            static void vc7_need_this_for_is_array(Type2Type2<U(*)[N]>);
+        
+            template<typename U, size_t N>
+            static yes is_array1(Type2Type2<U[N]>*);
+            static no  is_array1(...);
+        
+            template<typename U>
+            static yes is_array2(Type2Type2<U[]>*);
+            static no  is_array2(...);
+        
+        public:
+            enum { 
+                value =
+                    sizeof(is_array1((Type2Type2<T>*)0)) == sizeof(yes) ||
+                    sizeof(is_array2((Type2Type2<T>*)0)) == sizeof(yes)
+            };
+            
+        };
+        
+
+    } // Private Namespace
+
 ////////////////////////////////////////////////////////////////////////////////
 // class template TypeTraits
 // Figures out various properties of any given type
@@ -148,9 +184,6 @@ namespace Loki
         typedef char (&yes)[1];
         typedef char (&no) [2];
 
-        template<typename U, size_t N>
-        static void vc7_need_this_for_is_array(Type2Type<U[N]>);
-
         template<typename U>
         static yes is_reference(Type2Type<U&>);
         static no  is_reference(...);
@@ -175,14 +208,6 @@ namespace Loki
         static yes is_pointer2member(Type2Type<U V::*>);
         static no  is_pointer2member(...);
 
-        template<typename U, size_t N>
-        static yes is_array1(Type2Type<U[N]>);
-        static no  is_array1(...);
-
-        template<typename U>
-        static yes is_array2(Type2Type<U[]>);
-        static no  is_array2(...);
-
         template<typename U>
         static yes is_const(Type2Type<const U>);
         static no  is_const(...);
@@ -193,7 +218,7 @@ namespace Loki
 
     public:        
         //
-        // VC7 BUG - will not detect refernce to function
+        // VC7 BUG - will not detect reference to function
         //
         enum { 
             isReference = 
@@ -217,17 +242,15 @@ namespace Loki
         };
     
         enum { 
-            isArray =
-                sizeof(is_array1(Type2Type<T>())) == sizeof(yes) ||
-                sizeof(is_array2(Type2Type<T>())) == sizeof(yes)
+            isArray = Private::IsArray<T>::value
         };
 
         enum { 
             isVoid = 
-                SameType<T, void>::value          ||
-                SameType<T, const void>::value    ||
-                SameType<T, volatile void>::value ||
-                SameType<T, const volatile void>::value
+                IsSameType<T, void>::value          ||
+                IsSameType<T, const void>::value    ||
+                IsSameType<T, volatile void>::value ||
+                IsSameType<T, const volatile void>::value
         };
 
         enum { isStdUnsignedInt = 
