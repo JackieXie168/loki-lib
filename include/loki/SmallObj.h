@@ -13,7 +13,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/SmallObj.h,v 1.15 2005/10/15 19:41:23 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/include/loki/SmallObj.h,v 1.23 2005/11/13 16:51:22 syntheticpp Exp $
 
 
 #ifndef LOKI_SMALLOBJ_INC_
@@ -36,12 +36,50 @@
 #define LOKI_DEFAULT_OBJECT_ALIGNMENT 4
 #endif
 
+#ifndef LOKI_DEFAULT_SMALLOBJ_LIFETIME
+#define LOKI_DEFAULT_SMALLOBJ_LIFETIME LongevityLifetime::DieAsSmallObjectParent
+#endif
+
+#if defined(LOKI_SMALL_OBJECT_USE_NEW_ARRAY) && defined(_MSC_VER)
+#pragma message("Don't define LOKI_SMALL_OBJECT_USE_NEW_ARRAY when using a Microsoft compiler to prevet memory leaks.")
+#pragma message("now calling '#undef LOKI_SMALL_OBJECT_USE_NEW_ARRAY'")
+#undef LOKI_SMALL_OBJECT_USE_NEW_ARRAY
+#endif
+
+///  \defgroup  SmallObjectGroup Small objects
+///
+///  \defgroup  SmallObjectGroupInternal Internals
+///  \ingroup   SmallObjectGroup
 
 namespace Loki
 {
+    namespace LongevityLifetime
+    {
+        /** @struct DieAsSmallObjectParent
+            @ingroup SmallObjectGroup
+            Lifetime policy to manage lifetime dependencies of 
+            SmallObject base and child classes.
+            The Base class should have this lifetime
+        */
+        template <class T>
+        struct DieAsSmallObjectParent  : DieLast<T> {};
+
+        /** @struct DieAsSmallObjectChild
+            @ingroup SmallObjectGroup
+            Lifetime policy to manage lifetime dependencies of 
+            SmallObject base and child classes.
+            The Child class should have this lifetime
+        */
+        template <class T>
+        struct DieAsSmallObjectChild  : DieDirectlyBeforeLast<T> {};
+
+    } 
+
     class FixedAllocator;
 
-    /** @class SmallObjAllocator Manages pool of fixed-size allocators.
+    /** @class SmallObjAllocator
+        @ingroup SmallObjectGroupInternal
+     Manages pool of fixed-size allocators.
      Designed to be a non-templated base class of AllocatorSingleton so that
      implementation details can be safely hidden in the source code file.
      */
@@ -145,7 +183,9 @@ namespace Loki
     };
 
 
-    /** @class AllocatorSingleton This template class is derived from
+    /** @class AllocatorSingleton
+        @ingroup SmallObjectGroupInternal
+     This template class is derived from
      SmallObjAllocator in order to pass template arguments into it, and still
      have a default constructor for the singleton.  Each instance is a unique
      combination of all the template parameters, and hence is singleton only 
@@ -156,7 +196,7 @@ namespace Loki
      clients to use the new_handler without having the name of the new_handler
      function show up in classes derived from SmallObject or SmallValueObject.
      Thus, the only functions in the allocator which show up in SmallObject or
-     SmallValueObject inheritance heierarchies are the new and delete
+     SmallValueObject inheritance hierarchies are the new and delete
      operators.
     */
     template
@@ -165,7 +205,7 @@ namespace Loki
         std::size_t chunkSize = LOKI_DEFAULT_CHUNK_SIZE,
         std::size_t maxSmallObjectSize = LOKI_MAX_SMALL_OBJECT_SIZE,
         std::size_t objectAlignSize = LOKI_DEFAULT_OBJECT_ALIGNMENT,
-        template <class> class LifetimePolicy = Loki::NoDestroy
+        template <class> class LifetimePolicy = LOKI_DEFAULT_SMALLOBJ_LIFETIME
     >
     class AllocatorSingleton : public SmallObjAllocator
     {
@@ -257,41 +297,82 @@ namespace Loki
     }
 
 
-    /** @class SmallObjectBase Base class for small object allocation classes.
+    /** @class SmallObjectBase
+        @ingroup SmallObjectGroup
+     Base class for small object allocation classes.
      The shared implementation of the new and delete operators are here instead
-     of being duplicated in both SmallObject or SmallValueObject.  This class
-     is not meant to be used directly by clients, or derived from by clients.
-     Class has no data members so compilers can use Empty-Base-Optimization.
+     of being duplicated in both SmallObject or SmallValueObject, later just 
+     called Small-Objects.  This class is not meant to be used directly by clients, 
+     or derived from by clients. Class has no data members so compilers can 
+     use Empty-Base-Optimization.
 
-     @par Singleton Lifetime Policies and Small-Object Allocator
-     At this time, the only Singleton Lifetime policies recommended for
-     use with the Small-Object Allocator are Loki::SingletonWithLongevity and
-     Loki::NoDestroy.  The Loki::DefaultLifetime and Loki::PhoenixSingleton
-     policies are *not* recommended since they can cause the allocator to be
-     destroyed and release memory for singletons which inherit from either
-     SmallObject or SmallValueObject.  The default is Loki::NoDestroy to
-     insure that memory is never released before the object using that
-     memory is destroyed.  Loki::SingletonWithLongevity can also insure that
-     no memory is released before the owning object is destroyed, and also
-     insure that any memory controlled by a Small-Object Allocator is
-     released.
-
-     @par Small Singletons and Lifetime Policies
-     If you a singleton is derived from SmallValueObject or SmallObject, you
-     have to use compatible lifetime policies for both the singleton and the
-     allocator.  The 3 possible options are:
-     - They may both be Loki::NoDestroy.  Since neither is ever destroyed, the
-       destruction order does not matter.
-     - They may both be Loki::SingletonWithLongevity as long as the longevity
-       level for the singleton is lower than that for the allocator.  This is
-       why the allocator's GetLongevity function returns the highest value.
-     - The singleton may use Loki::SingletonWithLongevity, and the allocator
-       may use Loki::NoDestroy.  This is why the allocator's default policy is
-       Loki::NoDestroy.
-     You should *not* use Loki::NoDestroy for the singleton, and then use
-     Loki::SingletonWithLongevity for the allocator.  This causes the allocator
-     to be destroyed and release the memory for the singleton while the
-     singleton is still alive.
+     @par Lifetime Policy
+     
+     The SmallObjectBase template needs a lifetime policy because it owns
+     a singleton of SmallObjAllocator which does all the low level functions. 
+     When using a Small-Object in combination with the SingletonHolder template
+     you have to choose two lifetimes, that of the Small-Object and that of
+     the singleton. The rule is: The Small-Object lifetime must be greater than
+     the lifetime of the singleton hosting the Small-Object. Violating this rule
+     results in a crash on exit, because the hosting singleton tries to delete
+     the Small-Object which is then already destroyed. 
+     
+     The lifetime policies recommended for use with Small-Objects hosted 
+     by a SingletonHolder template are 
+         - LongevityLifetime::DieAsSmallObjectParent / LongevityLifetime::DieAsSmallObjectChild
+         - SingletonWithLongevity
+         - FollowIntoDeath (not supported by MSVC 7.1)
+         - NoDestroy
+     
+     The default lifetime of Small-Objects is 
+     LongevityLifetime::DieAsSmallObjectParent to
+     insure that memory is not released before a object with the lifetime
+     LongevityLifetime::DieAsSmallObjectChild using that
+     memory is destroyed. The LongevityLifetime::DieAsSmallObjectParent
+     lifetime has the highest possible value of a SetLongevity lifetime, so
+     you can use it in combination with your own lifetime not having also
+     the highest possible value.
+     
+     The DefaultLifetime and PhoenixSingleton policies are *not* recommended 
+     since they can cause the allocator to be destroyed and release memory 
+     for singletons hosting a object which inherit from either SmallObject
+     or SmallValueObject.  
+     
+     @par Lifetime usage
+    
+        - LongevityLifetime: The Small-Object has 
+          LongevityLifetime::DieAsSmallObjectParent policy and the Singleton
+          hosting the Small-Object has LongevityLifetime::DieAsSmallObjectChild. 
+          The child lifetime has a hard coded SetLongevity lifetime which is 
+          shorter than the lifetime of the parent, thus the child dies 
+          before the parent.
+         
+        - Both Small-Object and Singleton use SingletonWithLongevity policy.
+          The longevity level for the singleton must be lower than that for the
+          Small-Object. This is why the AllocatorSingleton's GetLongevity function 
+          returns the highest value.
+         
+        - FollowIntoDeath lifetime: The Small-Object has 
+          FollowIntoDeath::With<LIFETIME>::AsMasterLiftime
+          policy and the Singleton has 
+          FollowIntoDeath::AfterMaster<MASTERSINGLETON>::IsDestroyed policy,
+          where you could choose the LIFETIME. 
+        
+        - Both Small-Object and Singleton use NoDestroy policy. 
+          Since neither is ever destroyed, the destruction order does not matter.
+          Note: yow will get memory leaks!
+         
+        - The Small-Object has NoDestroy policy but the Singleton has
+          SingletonWithLongevity policy. Note: yow will get memory leaks!
+         
+     
+     You should *not* use NoDestroy for the singleton, and then use
+     SingletonWithLongevity for the Small-Object. 
+     
+     @par Examples:
+     
+     - test/SmallObj/SmallSingleton.cpp
+     - test/Singleton/Dependencies.cpp
      */
     template
     <
@@ -301,22 +382,25 @@ namespace Loki
         std::size_t objectAlignSize,
         template <class> class LifetimePolicy
     >
-	class SmallObjectBase
+    class SmallObjectBase
     {
 
 #if (LOKI_MAX_SMALL_OBJECT_SIZE != 0) && (LOKI_DEFAULT_CHUNK_SIZE != 0) && (LOKI_DEFAULT_OBJECT_ALIGNMENT != 0)
 
-        /// Defines type of allocator.
+    public:        
+        /// Defines type of allocator singleton, must be public 
+        /// to handle singleton lifetime dependencies.
         typedef AllocatorSingleton< ThreadingModel, chunkSize,
-            maxSmallObjectSize, objectAlignSize, LifetimePolicy > MyAllocator;
+            maxSmallObjectSize, objectAlignSize, LifetimePolicy > ObjAllocatorSingleton;
+    
+    private:
 
         /// Defines type for thread-safety locking mechanism.
-        typedef ThreadingModel< MyAllocator > MyThreadingModel;
+        typedef ThreadingModel< ObjAllocatorSingleton > MyThreadingModel;
 
-        /// Defines singleton made from allocator.
-        typedef Loki::SingletonHolder< MyAllocator, Loki::CreateStatic,
-            LifetimePolicy, ThreadingModel > MyAllocatorSingleton;
-		
+        /// Use singleton defined in AllocatorSingleton.
+        typedef typename ObjAllocatorSingleton::MyAllocatorSingleton MyAllocatorSingleton;
+        
     public:
 
         /// Throwing single-object new throws bad_alloc when allocation fails.
@@ -437,7 +521,9 @@ namespace Loki
     }; // end class SmallObjectBase
 
 
-    /** @class SmallObject Base class for polymorphic small objects, offers fast
+    /** @class SmallObject
+        @ingroup SmallObjectGroup
+     SmallObject Base class for polymorphic small objects, offers fast
      allocations & deallocations.  Destructor is virtual and public.  Default
      constructor is trivial.   Copy-constructor and copy-assignment operator are
      not implemented since polymorphic classes almost always disable those
@@ -450,7 +536,7 @@ namespace Loki
         std::size_t chunkSize = LOKI_DEFAULT_CHUNK_SIZE,
         std::size_t maxSmallObjectSize = LOKI_MAX_SMALL_OBJECT_SIZE,
         std::size_t objectAlignSize = LOKI_DEFAULT_OBJECT_ALIGNMENT,
-        template <class> class LifetimePolicy = Loki::NoDestroy
+        template <class> class LifetimePolicy = LOKI_DEFAULT_SMALLOBJ_LIFETIME
     >
     class SmallObject : public SmallObjectBase< ThreadingModel, chunkSize,
             maxSmallObjectSize, objectAlignSize, LifetimePolicy >
@@ -469,7 +555,9 @@ namespace Loki
     }; // end class SmallObject
 
 
-    /** @class SmallValueObject Base class for small objects with value-type
+    /** @class SmallValueObject
+        @ingroup SmallObjectGroup
+     SmallValueObject Base class for small objects with value-type
      semantics - offers fast allocations & deallocations.  Destructor is
      non-virtual, inline, and protected to prevent unintentional destruction
      through base class.  Default constructor is trivial.   Copy-constructor
@@ -483,7 +571,7 @@ namespace Loki
         std::size_t chunkSize = LOKI_DEFAULT_CHUNK_SIZE,
         std::size_t maxSmallObjectSize = LOKI_MAX_SMALL_OBJECT_SIZE,
         std::size_t objectAlignSize = LOKI_DEFAULT_OBJECT_ALIGNMENT,
-        template <class> class LifetimePolicy = Loki::NoDestroy
+        template <class> class LifetimePolicy = LOKI_DEFAULT_SMALLOBJ_LIFETIME
     >
     class SmallValueObject : public SmallObjectBase< ThreadingModel, chunkSize,
             maxSmallObjectSize, objectAlignSize, LifetimePolicy >
@@ -503,6 +591,30 @@ namespace Loki
 // Nov. 26, 2004: re-implemented by Rich Sposato.
 //
 // $Log: SmallObj.h,v $
+// Revision 1.23  2005/11/13 16:51:22  syntheticpp
+// update documentation due to the new lifetime policies
+//
+// Revision 1.22  2005/11/07 12:06:43  syntheticpp
+// change lifetime policy DieOrder to a msvc7.1 compilable version. Make this the default lifetime for SmallObject
+//
+// Revision 1.21  2005/11/05 17:43:55  syntheticpp
+// disable FollowIntoDeath/DieOrder lifetime policies when using the msvc 7.1 compiler, bug article: 839821 'Microsoft has confirmed that this is a problem..'
+//
+// Revision 1.20  2005/11/02 20:01:10  syntheticpp
+// more doxygen documentation, modules added
+//
+// Revision 1.19  2005/11/01 11:11:52  syntheticpp
+// add lifetime policies to manage singleton lifetime dependencies: FollowIntoDeath and DieOrder. Change SmallObject.h to avoid memory leaks by default
+//
+// Revision 1.18  2005/10/30 14:03:23  syntheticpp
+// replace tabs space
+//
+// Revision 1.17  2005/10/29 08:10:13  syntheticpp
+// #undef LOKI_SMALL_OBJECT_USE_NEW_ARRAY when using a Microsoft compiler
+//
+// Revision 1.16  2005/10/26 00:50:44  rich_sposato
+// Minor changes to documentation comments.
+//
 // Revision 1.15  2005/10/15 19:41:23  syntheticpp
 // fix bug 1327060. Add missing template parameter to make different static variables possible
 //

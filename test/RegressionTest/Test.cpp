@@ -11,7 +11,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/RegressionTest/Test.cpp,v 1.8 2005/10/06 17:50:14 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/test/RegressionTest/Test.cpp,v 1.12 2005/10/30 14:22:31 syntheticpp Exp $
 
 #ifdef __INTEL_COMPILER
 # pragma warning(disable: 111 193 304 383 444 488 981 1418)
@@ -41,22 +41,39 @@ Test::tests_type Test::tests;
 // is the header inclusion to execute the correspond
 // unit test.
 
+#include "SmallObjectTest.h"
+#include "SingletonTest.h"
+
+#include "ThreadsTest.h"
 #include "TypelistTest.h"
 #include "SequenceTest.h"
 #include "TypeManipTest.h"
 #include "TypeTraitsTest.h"
 #include "TypeTraitsTest2.h"
-#include "SmallObjectTest.h"
-#include "SingletonTest.h"
 #include "SmartPtrTest.h"
 #include "FactoryTest.h"
 #include "FactoryParmTest.h"
 #include "AbstractFactoryTest.h"
-#include "AssocVectorTest.h"
 #include "FunctorTest.h"
 #include "DataGeneratorsTest.h"
+#include "AssocVectorTest.h"
+
+int main()
+{
+    int result = Test::run("Loki Unit Test");
+
+    #if defined(__BORLANDC__) || defined(__GNUC__) || defined(_MSC_VER)
+    // Stop console window from closing if run from IDE.
+    system("pause"); 
+    #endif
+
+    return result;
+}
+
 
 /*
+ * Table is out of date (24.10.2005)
+ *
  * AP - All Pass
  * FC - Fails to Compile
  * ?  - Unknown/Not Tested/Not Recorded
@@ -98,20 +115,20 @@ Test::tests_type Test::tests;
 
  */ 
 
-int main()
-{
-
-int result = Test::run("Loki Unit Test");
-
-#if defined(__BORLANDC__) || defined(__GNUC__) || defined(_MSC_VER)
-  system("pause"); // Stop console window from closing if run from IDE.
-#endif
-
-return result;
-}
-
 
 // $Log: Test.cpp,v $
+// Revision 1.12  2005/10/30 14:22:31  syntheticpp
+// disable threading because the sdk (windows.h) is not detected automatically by the batch scripts
+//
+// Revision 1.11  2005/10/30 13:49:44  syntheticpp
+// make disabling the TYPELIST macros possible
+//
+// Revision 1.10  2005/10/24 20:51:38  syntheticpp
+// Table is out of date
+//
+// Revision 1.9  2005/10/24 20:35:12  syntheticpp
+// small changes for Threads; add compile test for Threads.h
+//
 // Revision 1.8  2005/10/06 17:50:14  syntheticpp
 // adding template based list/sequence implementation, should replace LOKI_TYPELIST_, update some files
 //

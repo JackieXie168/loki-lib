@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 // The Loki Library
-// Copyright (c) 2005 Peter Kümmel
+// Copyright (c) 2005 Peter Kmmel
 // Permission to use, copy, modify, distribute and sell this software for any 
 //     purpose is hereby granted without fee, provided that the above copyright 
 //     notice appear in all copies and that both that copyright notice and this 
@@ -20,9 +20,9 @@
 #include <vector>
 #include <iostream>
 
-#include "loki/Singleton.h"
-#include "loki/TypeList.h"
-
+#include "Singleton.h"
+#include "Typelist.h"
+#include "Sequence.h"
 
 namespace Loki
 {
@@ -165,7 +165,7 @@ namespace Loki
     };
 
     template<unsigned int L, class T, typename P1>
-    class OrderedStatic<L, T, LOKI_TYPELIST_1(P1)> : public Private::OrderedStaticBase<T>
+    class OrderedStatic<L, T, Loki::Seq<P1> > : public Private::OrderedStaticBase<T>
     {
     public:
         OrderedStatic(P1 p) : Private::OrderedStaticBase<T>(L), para_(p)

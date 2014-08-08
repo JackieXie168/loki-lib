@@ -13,7 +13,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/src/SmallObj.cpp,v 1.14 2005/10/17 18:06:13 rich_sposato Exp $
+// $Header: /cvsroot/loki-lib/loki/src/SmallObj.cpp,v 1.17 2005/11/03 12:43:55 syntheticpp Exp $
 
 
 #include "../include/loki/SmallObj.h"
@@ -35,7 +35,11 @@ using namespace Loki;
 namespace Loki
 {
 
-    /** @struct Chunk Contains info about each allocated Chunk.
+    /** @struct Chunk
+        @ingroup SmallObjectGroupInternal
+     Contains info about each allocated Chunk - which is a collection of
+     contiguous blocks.  Each block is the same size, as specified by the
+     FixedAllocator.  The number of blocks in a Chunk depends upon page size.
      This is a POD-style struct with value-semantics.  All functions and data
      are private so that they can not be changed by anything other than the
      FixedAllocator which owns the Chunk.
@@ -125,6 +129,7 @@ namespace Loki
     };
 
     /** @class FixedAllocator
+        @ingroup SmallObjectGroupInternal
      Offers services for allocating fixed-sized objects.  It has a container
      of "containers" of fixed-size blocks.  The outer container has all the
      Chunks.  The inner container is a Chunk which owns some blocks.
@@ -694,8 +699,8 @@ void FixedAllocator::DoDeallocate(void* p)
 }
 
 // GetOffset ------------------------------------------------------------------
+/// @ingroup SmallObjectGroupInternal
 /// Calculates index into array where a FixedAllocator of numBytes is located.
-
 inline std::size_t GetOffset( std::size_t numBytes, std::size_t alignment )
 {
     const std::size_t alignExtra = alignment-1;
@@ -703,9 +708,11 @@ inline std::size_t GetOffset( std::size_t numBytes, std::size_t alignment )
 }
 
 // DefaultAllocator -----------------------------------------------------------
-/** Calls the default allocator when SmallObjAllocator decides not to handle a
+/** @ingroup SmallObjectGroupInternal
+ Calls the default allocator when SmallObjAllocator decides not to handle a
  request.  SmallObjAllocator calls this if the number of bytes is bigger than
  the size which can be handled by any FixedAllocator.
+ @param numBytes number of bytes
  @param doThrow True if this function should throw an exception, or false if it
   should indicate failure by returning a NULL pointer.
 */
@@ -723,7 +730,8 @@ void * DefaultAllocator( std::size_t numBytes, bool doThrow )
 }
 
 // DefaultDeallocator ---------------------------------------------------------
-/** Calls default deallocator when SmallObjAllocator decides not to handle a
+/** @ingroup SmallObjectGroupInternal
+ Calls default deallocator when SmallObjAllocator decides not to handle a   
  request.  The default deallocator could be the global delete operator or the
  free function.  The free function is the preferred default deallocator since
  it matches malloc which is the preferred default allocator.  SmallObjAllocator
@@ -879,6 +887,15 @@ void SmallObjAllocator::Deallocate( void * p )
 ////////////////////////////////////////////////////////////////////////////////
 
 // $Log: SmallObj.cpp,v $
+// Revision 1.17  2005/11/03 12:43:55  syntheticpp
+// more doxygen documentation, modules added
+//
+// Revision 1.16  2005/11/02 20:01:11  syntheticpp
+// more doxygen documentation, modules added
+//
+// Revision 1.15  2005/10/26 00:50:44  rich_sposato
+// Minor changes to documentation comments.
+//
 // Revision 1.14  2005/10/17 18:06:13  rich_sposato
 // Removed unneeded include statements.  Changed lines that check for corrupt
 // Chunk.  Changed assertions when allocating.

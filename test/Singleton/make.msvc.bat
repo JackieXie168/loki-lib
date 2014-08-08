@@ -1,6 +1,7 @@
 if not exist tmp\ mkdir tmp
 
 
+
 ::  DeletableSingleton.cpp
 
 cl -c -Zm200 -O2 -DNDEBUG -MT -EHsc -GR -W0 -wd4710 -I"." -I"..\..\include" -Fotmp\ DeletableSingleton.cpp
@@ -16,6 +17,7 @@ link /NOLOGO /SUBSYSTEM:CONSOLE /incremental:no /OUT:"DeletableSingleton-msvc.ex
 )
 
 
+
 ::  Phoenix.cpp
 
 cl -c -Zm200 -O2 -DNDEBUG -MT -EHsc -GR -W0 -wd4710 -I"." -I"..\..\include" -Fotmp\ Phoenix.cpp
@@ -27,5 +29,21 @@ link /NOLOGO /SUBSYSTEM:CONSOLE /incremental:no /OUT:"Phoenix-msvc.exe" ..\..\li
 ) else (
 
 link /NOLOGO /SUBSYSTEM:CONSOLE /incremental:no /OUT:"Phoenix-msvc.exe" tmp\Phoenix.obj ..\..\lib\SmallObj.obj ..\..\lib\Singleton.obj 
+
+)
+
+
+
+::  Dependencies.cpp
+
+cl -c -Zm200 -O2 -DNDEBUG -MT -EHsc -GR -W0 -wd4710 -I"." -I"..\..\include" -Fotmp\ Dependencies.cpp
+
+if not defined LOKI_MSVC_NOLIB (
+
+link /NOLOGO /SUBSYSTEM:CONSOLE /incremental:no /OUT:"Dependencies-msvc.exe" ..\..\lib\loki.lib tmp\Dependencies.obj 
+
+) else (
+
+link /NOLOGO /SUBSYSTEM:CONSOLE /incremental:no /OUT:"Dependencies-msvc.exe" tmp\Dependencies.obj ..\..\lib\SmallObj.obj ..\..\lib\Singleton.obj 
 
 )
