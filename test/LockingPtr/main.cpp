@@ -10,7 +10,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header:
+// $Header: /cvsroot/loki-lib/loki/test/LockingPtr/main.cpp,v 1.5 2006/04/15 00:41:45 rich_sposato Exp $
 
 #define LOKI_CLASS_LEVEL_THREADING
 

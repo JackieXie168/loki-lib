@@ -10,13 +10,20 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/Register/foo.cpp,v 1.2 2006/03/08 17:07:18 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/test/Register/foo.cpp,v 1.4 2006/06/19 12:46:22 syntheticpp Exp $
 
 #include "foo.h"
 #include <iostream>
 
+Base::~Base(){}
+
 Foo::Foo(){}
 Boo::Boo(){}
+
+
+Foo::~Foo(){}
+Boo::~Boo(){}
+
 
 void Foo::foo(){std::cout << "Foo::foo() called,  this: " << this << "\n"; }
 void Boo::foo(){std::cout << "Boo::foo() called,  this: " << this << "\n"; }
@@ -36,25 +43,25 @@ Base* createBoo(){ return new Boo; }
 
 namespace Loki
 {
-	template<> bool RegisterFunction<Foo>()
+    template<> bool RegisterFunction<Foo>()
     {
-    	std::cout << "RegisterFunction<Foo>\n";
-    	return registerClass("Foo", &createFoo);
+        std::cout << "RegisterFunction<Foo>\n";
+        return registerClass("Foo", &createFoo);
     }
-	template<> bool RegisterFunction<Boo>()
+    template<> bool RegisterFunction<Boo>()
     {
-    	std::cout << "RegisterFunction<Boo>\n";
-    	return registerClass("Boo", &createBoo);
+        std::cout << "RegisterFunction<Boo>\n";
+        return registerClass("Boo", &createBoo);
     }
 
-	template<> bool UnRegisterFunction<Foo>()
+    template<> bool UnRegisterFunction<Foo>()
     {
-    	std::cout << "UnRegisterFunction<Foo>\n";
-    	return true;
+        std::cout << "UnRegisterFunction<Foo>\n";
+        return true;
     }
-	template<> bool UnRegisterFunction<Boo>()
+    template<> bool UnRegisterFunction<Boo>()
     {
-    	std::cout << "UnRegisterFunction<Boo>\n";
-    	return true;
+        std::cout << "UnRegisterFunction<Boo>\n";
+        return true;
     }
 }

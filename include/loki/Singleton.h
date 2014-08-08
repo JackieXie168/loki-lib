@@ -16,7 +16,7 @@
 #ifndef LOKI_SINGLETON_INC_
 #define LOKI_SINGLETON_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/Singleton.h,v 1.28 2006/03/03 11:58:24 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/include/loki/Singleton.h,v 1.31 2006/06/19 12:39:08 syntheticpp Exp $
 
 #include "LokiExport.h"
 #include "Threads.h"
@@ -40,6 +40,14 @@
 ///  \ingroup   SingletonGroup
 ///  \defgroup  LifetimeGroup Lifetime policies
 ///  \ingroup   SingletonGroup
+///  The lifetimes of the singleton.
+///  \par Special lifetime for SmallObjects
+///  When the holded object is a Small(Value)Object or the holded object 
+///  uses objects which are or inherit from Small(Value)Object
+///  then you can't use the default lifetime: you must use the lifetime
+///  \code Loki::LongevityLifetime::DieAsSmallObjectChild \endcode
+///  Be aware of this when you use Loki::Factory, Loki::Functor, or Loki::Function.
+
 
 
 namespace Loki
@@ -855,18 +863,24 @@ namespace Loki
         static T& Instance();
     };
 
-    /// \def LOKI_SINGLETON_INSTANCE_DEFINITION(SHOLDER)
-    /// Convenience macro for the definition of the static Instance member function
-    /// Put this macro called with a SingletonHolder typedef into your cpp file.
-
-#define LOKI_SINGLETON_INSTANCE_DEFINITION(SHOLDER)                          \
-    template<>                                                               \
-    SHOLDER::ObjectType&  ::Loki::Singleton<SHOLDER::ObjectType>::Instance() \
-    {                                                                        \
-        return SHOLDER::Instance();                                          \
-    } 
-
 } // namespace Loki
+
+
+/// \def LOKI_SINGLETON_INSTANCE_DEFINITION(SHOLDER)
+/// Convenience macro for the definition of the static Instance member function
+/// Put this macro called with a SingletonHolder typedef into your cpp file.
+
+#define LOKI_SINGLETON_INSTANCE_DEFINITION(SHOLDER)                     \
+namespace Loki                                                          \
+{                                                                        \
+    template<>                                                          \
+    SHOLDER::ObjectType&  Singleton<SHOLDER::ObjectType>::Instance()    \
+    {                                                                   \
+        return SHOLDER::Instance();                                     \
+    }                                                                    \
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Change log:
@@ -883,6 +897,15 @@ namespace Loki
 #endif // SINGLETON_INC_
 
 // $Log: Singleton.h,v $
+// Revision 1.31  2006/06/19 12:39:08  syntheticpp
+// replace tabs with 4 spaces
+//
+// Revision 1.30  2006/05/20 10:23:07  syntheticpp
+// add warnings in the documentation about the special lifetime when using SmallObjects
+//
+// Revision 1.29  2006/03/15 08:47:18  syntheticpp
+// gcc: specialization only in the correct namespace, thx to Sam Miller
+//
 // Revision 1.28  2006/03/03 11:58:24  syntheticpp
 // also compile with gcc
 //

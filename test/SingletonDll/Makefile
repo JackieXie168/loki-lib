@@ -1,25 +1,43 @@
-BIN = client
-LIB1 = libfoo.so
-LIB2 = libsingletondll.so
-#mingw names
-#LIB1 = foo.dll
-#LIB2 = singletondll.dll
-CXXFLAGS = -Wall -Wold-style-cast -Wundef -Wsign-compare -Wconversion -Wpointer-arith -pedantic -O2
-CPPFLAGS = -I../../include -DNDEBUG
-LDFLAGS = -L../../lib
-LDLIBS = -lloki
+ifeq ($(OS),Darwin)
+  LIB1 = libfoo.dylib
+  LIB2 = libsingletondll.dylib
+  SHARED_LIB_FLAG = -dynamiclib
+else
+ifeq ($(OS),Linux)
+  LIB1 = libfoo.so
+  LIB2 = libsingletondll.so
+  SHARED_LIB_FLAG = --shared
+else
+  LIB1 = foo.dll
+  LIB2 = singletondll.dll
+  SHARED_LIB_FLAG = --shared
+endif
+endif
 
-.PHONY: build clean
-build: $(BIN)
+BIN1 = client$(BIN_SUFFIX)
+SRC1 = client.cpp
+OBJ1 = $(SRC1:.cpp=.o)
+SRC2 = foo.cpp
+OBJ2 = $(SRC2:.cpp=.o)
+SRC3 = singletondll.cpp
+OBJ3 = $(SRC3:.cpp=.o)
 
-$(BIN): $(LIB1) $(LIB2)
-	$(CXX) $(CXXFLAGS) -L. $(LDFLAGS) $(CPPFLAGS) -o $(BIN) client.cpp $(LDLIBS) -lfoo -lsingletondll
+.PHONY: all clean
+all: $(BIN1)
 
-$(LIB1): foo.cpp
-	$(CXX) --shared $(CXXFLAGS) $(CPPFLAGS) -o $(LIB1) foo.cpp 
+$(BIN1): $(OBJ1) $(LIB1) $(LIB2)
+	$(CXX) -L. $(LDFLAGS) -o $@ $(OBJ1) $(LDLIBS) -lfoo -lsingletondll
 
-$(LIB2): singletondll.cpp
-	$(CXX) --shared $(CXXFLAGS) $(CPPFLAGS) -o $(LIB2) singletondll.cpp -L. -lfoo
+$(LIB1): $(OBJ2)
+	$(CXX) $(SHARED_LIB_FLAG) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+$(LIB2): $(OBJ3)
+	$(CXX) $(SHARED_LIB_FLAG) $(LDFLAGS) -L. -o $@ $^ -lfoo $(LDLIBS)
 
 clean:
-	rm -f $(BIN) $(LIB1) $(LIB2)
+	$(RM) $(BIN1)
+	$(RM) $(OBJ1)
+	$(RM) $(LIB1)
+	$(RM) $(OBJ2)
+	$(RM) $(LIB2)
+	$(RM) $(OBJ3)

@@ -12,7 +12,7 @@
 #ifndef CLASSLIST_H
 #define CLASSLIST_H
 
-// $Header: /cvsroot/loki-lib/loki/test/Register/classlist.h,v 1.1 2006/03/08 16:50:18 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/test/Register/classlist.h,v 1.3 2006/06/19 12:46:22 syntheticpp Exp $
 
 #include <string>
 
@@ -21,15 +21,16 @@
 
 struct Base
 {
-	virtual void foo() = 0;
+    virtual void foo() = 0;
+    virtual ~Base();
 };
 
 bool registerClass(std::string, Base*(*)() );
 
 typedef Loki::Seq
 <
-	struct Foo,
-	struct Boo
+    struct Foo,
+    struct Boo
 
 >::Type ClassList;
 

@@ -20,7 +20,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/Threads.h,v 1.27 2006/01/22 15:33:41 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/include/loki/Threads.h,v 1.29 2006/06/04 20:18:39 vizowl Exp $
 
 ///  @defgroup  ThreadingGroup Threading
 ///  Policies to for the threading model:
@@ -102,7 +102,7 @@
 
 
 
-#elif defined(_PTHREAD_H) //POSIX threads (pthread.h)
+#elif defined(_PTHREAD_H) || defined(_POSIX_PTHREAD_H) //POSIX threads (pthread.h)
 
 
 #define LOKI_THREADS_MUTEX(x)           pthread_mutex_t x
@@ -159,16 +159,28 @@ namespace Loki
     class Mutex
     {
     public:
-        Mutex()       { LOKI_THREADS_MUTEX_INIT  ( (&mtx_) ); }
-        ~Mutex()      { LOKI_THREADS_MUTEX_DELETE( (&mtx_) ); }
-        void Lock()   { LOKI_THREADS_MUTEX_LOCK  ( (&mtx_) ); }
-        void Unlock() { LOKI_THREADS_MUTEX_UNLOCK( (&mtx_) ); }
+        Mutex()
+        {
+            LOKI_THREADS_MUTEX_INIT( (&mtx_) );
+        }
+        ~Mutex()
+        {
+            LOKI_THREADS_MUTEX_DELETE( (&mtx_) );
+        }
+        void Lock()
+        {
+            LOKI_THREADS_MUTEX_LOCK( (&mtx_) );
+        }
+        void Unlock()
+        {
+            LOKI_THREADS_MUTEX_UNLOCK( (&mtx_) );
+        }
     private:
         /// Copy-constructor not implemented.
         Mutex( const Mutex & );
         /// Copy-assignement operator not implemented.
         Mutex & operator = ( const Mutex & );
-        LOKI_THREADS_MUTEX(mtx_;)
+        LOKI_THREADS_MUTEX( mtx_; )
     };
 
 
@@ -222,7 +234,7 @@ namespace Loki
     };
     
 
-#if defined(_WINDOWS_) || defined(_WINDOWS_H) || defined(_PTHREAD_H) 
+#if defined(_WINDOWS_) || defined(_WINDOWS_H) || defined(_PTHREAD_H) || defined(_POSIX_PTHREAD_H) 
 
     ////////////////////////////////////////////////////////////////////////////////
     ///  \class ObjectLevelLockable
@@ -286,7 +298,7 @@ namespace Loki
         
     };
 
-#if defined(_PTHREAD_H) 
+#if defined(_PTHREAD_H) || defined(_POSIX_PTHREAD_H) 
     template <class Host, class MutexPolicy>
     pthread_mutex_t ObjectLevelLockable<Host, MutexPolicy>::atomic_mutex_ = PTHREAD_MUTEX_INITIALIZER;
 #endif
@@ -370,7 +382,7 @@ namespace Loki
         
     };
 
-#if defined(_PTHREAD_H) 
+#if defined(_PTHREAD_H) || defined(_POSIX_PTHREAD_H) 
     template <class Host, class MutexPolicy>
     pthread_mutex_t ClassLevelLockable<Host, MutexPolicy>::atomic_mutex_ = PTHREAD_MUTEX_INITIALIZER;
 #endif
@@ -379,7 +391,7 @@ namespace Loki
     typename ClassLevelLockable< Host, MutexPolicy >::Initializer 
     ClassLevelLockable< Host, MutexPolicy >::initializer_;
 
-#endif // defined(_WINDOWS_) || defined(_WINDOWS_H) || defined(_PTHREAD_H) 
+#endif // defined(_WINDOWS_) || defined(_WINDOWS_H) || defined(_PTHREAD_H) || defined(_POSIX_PTHREAD_H) 
   
 } // namespace Loki
 
@@ -395,6 +407,12 @@ namespace Loki
 #endif
 
 // $Log: Threads.h,v $
+// Revision 1.29  2006/06/04 20:18:39  vizowl
+// added a check for _POSIX_PTHREAD_H to detect pthread.h on OS X
+//
+// Revision 1.28  2006/04/15 00:39:50  rich_sposato
+// Stylistic change so I can put breakpoint on lines within Mutex functions.
+//
 // Revision 1.27  2006/01/22 15:33:41  syntheticpp
 // a -pedantic fix
 //

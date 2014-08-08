@@ -12,21 +12,23 @@
 #ifndef LOKI_FOO_H
 #define LOKI_FOO_H
 
-// $Header: /cvsroot/loki-lib/loki/test/Register/foo.h,v 1.1 2006/03/08 16:50:18 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/test/Register/foo.h,v 1.3 2006/06/19 12:46:22 syntheticpp Exp $
 
 #include "classlist.h"
 
 
 struct Foo : Base
 {
-	Foo();
-	void foo();
+    Foo();
+    virtual ~Foo();
+    void foo();
 };
 
 struct Boo : Base
 {
-	Boo();
-	void foo();
+    Boo();
+    virtual ~Boo();
+    void foo();
 };
 
 

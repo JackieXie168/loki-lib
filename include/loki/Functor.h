@@ -13,12 +13,12 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/Functor.h,v 1.19 2006/03/08 18:22:42 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/include/loki/Functor.h,v 1.22 2006/06/09 12:58:44 syntheticpp Exp $
 
 #ifndef LOKI_FUNCTOR_INC_
 #define LOKI_FUNCTOR_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/Functor.h,v 1.19 2006/03/08 18:22:42 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/include/loki/Functor.h,v 1.22 2006/06/09 12:58:44 syntheticpp Exp $
 
 #include "Typelist.h"
 #include "Sequence.h"
@@ -30,17 +30,14 @@
 
 ///  \defgroup FunctorGroup Function objects
 
-/// \def LOKI_FUNCTOR_IS_NOT_A_SMALLOBJECT
-/// \ingroup FunctorGroup
-/// Define to avoid static instantiation/delete order problems.
-/// Removes crashes when using static Functors and multi threading.
-/// Defining also removes problems when unloading Dlls which defines
-/// static Functor objects.
-/// So being a Loki::SmallValueObj limits the value of Functor
-/// and Function and makes them more different to tr1::function.
 #ifndef LOKI_FUNCTOR_IS_NOT_A_SMALLOBJECT
 //#define LOKI_FUNCTOR_IS_NOT_A_SMALLOBJECT
 #endif
+
+#ifndef LOKI_FUNCTORS_ARE_COMPARABLE
+//#define LOKI_FUNCTORS_ARE_COMPARABLE
+#endif
+
 
 /// \namespace Loki
 /// All classes of Loki are in the Loki namespace
@@ -66,7 +63,8 @@ namespace Loki
 #endif
 
             typedef R ResultType;
-            
+            typedef FunctorImplBase<R, ThreadingModel> FunctorImplBaseType;
+
             typedef EmptyType Parm1;
             typedef EmptyType Parm2;
             typedef EmptyType Parm3;
@@ -97,6 +95,14 @@ namespace Loki
                 assert(typeid(*pClone) == typeid(*pObj));
                 return pClone;
             }
+
+
+#ifdef LOKI_FUNCTORS_ARE_COMPARABLE
+
+            virtual bool operator==(const FunctorImplBase&) const = 0;
+           
+#endif            
+         
         };
     }
     
@@ -944,6 +950,23 @@ namespace Loki
         
         LOKI_DEFINE_CLONE_FUNCTORIMPL(FunctorHandler)
 
+
+#ifdef LOKI_FUNCTORS_ARE_COMPARABLE
+
+
+        bool operator==(const typename Base::FunctorImplBaseType& rhs) const
+        {
+            // there is no static information if Functor holds a member function 
+            // or a free function; this is the main difference to tr1::function
+            if(typeid(*this) != typeid(rhs))
+                return false; // cannot be equal
+
+            const FunctorHandler& fh = static_cast<const FunctorHandler&>(rhs);
+            // if this line gives a compiler error, you are using a function object.
+            // you need to implement bool MyFnObj::operator == (const MyFnObj&) const;
+            return  f_==fh.f_;
+        }
+#endif
         // operator() implementations for up to 15 arguments
                 
         ResultType operator()()
@@ -1052,7 +1075,22 @@ namespace Loki
         {}
         
         LOKI_DEFINE_CLONE_FUNCTORIMPL(MemFunHandler)
-        
+
+
+#ifdef LOKI_FUNCTORS_ARE_COMPARABLE
+
+        bool operator==(const typename Base::FunctorImplBaseType& rhs) const
+        {
+            if(typeid(*this) != typeid(rhs))
+                return false; // cannot be equal 
+
+            const MemFunHandler& mfh = static_cast<const MemFunHandler&>(rhs);
+            // if this line gives a compiler error, you are using a function object.
+            // you need to implement bool MyFnObj::operator == (const MyFnObj&) const;
+            return  pObj_==mfh.pObj_ && pMemFn_==mfh.pMemFn_;
+        }
+#endif   
+
         ResultType operator()()
         { return ((*pObj_).*pMemFn_)(); }
 
@@ -1161,6 +1199,22 @@ namespace Loki
 ///
 ///  \ingroup FunctorGroup
 ///  A generalized functor implementation with value semantics
+///
+/// \par Macro: LOKI_FUNCTOR_IS_NOT_A_SMALLOBJECT
+/// Define 
+/// \code LOKI_FUNCTOR_IS_NOT_A_SMALLOBJECT \endcode
+/// to avoid static instantiation/delete 
+/// order problems.
+/// It often helps against crashes when using static Functors and multi threading.
+/// Defining also removes problems when unloading Dlls which hosts
+/// static Functor objects.
+///
+/// \par Macro: LOKI_FUNCTORS_ARE_COMPARABLE
+/// To enable the operator== define the macro
+/// \code LOKI_FUNCTORS_ARE_COMPARABLE \endcode
+/// The macro is disabled by default, because it breaks compiling functor 
+/// objects  which have no operator== implemented, keep in mind when you enable
+/// operator==.
 ////////////////////////////////////////////////////////////////////////////////
     template <typename R = void, class TList = NullType,
         template<class, class> class ThreadingModel = LOKI_DEFAULT_THREADING_NO_OBJ_LEVEL>
@@ -1237,6 +1291,26 @@ namespace Loki
             spImpl_.reset(0);
         }
 #endif
+
+#ifdef LOKI_FUNCTORS_ARE_COMPARABLE
+
+        bool operator==(const Functor& rhs) const
+        {
+            if(spImpl_.get()==0 && rhs.spImpl_.get()==0)
+                return true;
+            if(spImpl_.get()!=0 && rhs.spImpl_.get()!=0)
+                return *spImpl_.get() == *rhs.spImpl_.get();
+            else
+                return false;
+        }
+
+        bool operator!=(const Functor& rhs) const
+        {
+            return !(*this==rhs);
+        }
+#endif
+
+        // operator() implementations for up to 15 arguments
 
         ResultType operator()() const
         {
@@ -1356,6 +1430,13 @@ namespace Loki
         std::auto_ptr<Impl> spImpl_;
     };
     
+
+////////////////////////////////////////////////////////////////////////////////
+//  
+//  BindersFirst and Chainer 
+//
+////////////////////////////////////////////////////////////////////////////////
+
     namespace Private
     {
         template <class Fctor> struct BinderFirstTraits;
@@ -1442,7 +1523,20 @@ namespace Loki
         {}
 
         LOKI_DEFINE_CLONE_FUNCTORIMPL(BinderFirst)
+
+#ifdef LOKI_FUNCTORS_ARE_COMPARABLE
         
+        bool operator==(const typename Base::FunctorImplBaseType& rhs) const
+        {
+            if(typeid(*this) != typeid(rhs))
+                return false; // cannot be equal 
+            // if this line gives a compiler error, you are using a function object.
+            // you need to implement bool MyFnObj::operator == (const MyFnObj&) const;
+            return    f_ == ((static_cast<const BinderFirst&> (rhs)).f_) &&
+                      b_ == ((static_cast<const BinderFirst&> (rhs)).b_);
+        }
+#endif
+
         // operator() implementations for up to 15 arguments
                 
         ResultType operator()()
@@ -1561,6 +1655,19 @@ namespace Loki
         Chainer(const Fun1& fun1, const Fun2& fun2) : f1_(fun1), f2_(fun2) {}
 
         LOKI_DEFINE_CLONE_FUNCTORIMPL(Chainer)
+
+#ifdef LOKI_FUNCTORS_ARE_COMPARABLE
+                
+        bool operator==(const typename Base::Impl::FunctorImplBaseType& rhs) const
+        {
+            if(typeid(*this) != typeid(rhs))
+                return false; // cannot be equal 
+            // if this line gives a compiler error, you are using a function object.
+            // you need to implement bool MyFnObj::operator == (const MyFnObj&) const;
+            return    f1_ == ((static_cast<const Chainer&> (rhs)).f2_) &&
+                      f2_ == ((static_cast<const Chainer&> (rhs)).f1_);
+        }
+#endif
 
         // operator() implementations for up to 15 arguments
 
@@ -1688,6 +1795,15 @@ namespace Loki
 #endif  // FUNCTOR_INC_
 
 // $Log: Functor.h,v $
+// Revision 1.22  2006/06/09 12:58:44  syntheticpp
+// simplify Functor::operator== implementation. Thanks to Eric Beyeler
+//
+// Revision 1.21  2006/06/01 12:33:05  syntheticpp
+// add operator== to Functor, initiated by Eric Beyeler
+//
+// Revision 1.20  2006/05/20 10:23:07  syntheticpp
+// add warnings in the documentation about the special lifetime when using SmallObjects
+//
 // Revision 1.19  2006/03/08 18:22:42  syntheticpp
 // doxygen fixes
 //

@@ -12,7 +12,7 @@
 #ifndef LOKI_PIMPL_H
 #define LOKI_PIMPL_H
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/Pimpl.h,v 1.19 2006/03/08 17:07:11 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/include/loki/Pimpl.h,v 1.21 2006/06/19 12:39:08 syntheticpp Exp $
 
 ///  \defgroup PimplGroup Pimpl 
 
@@ -35,21 +35,21 @@ namespace Loki
     ///   Is the default smart pointer of Pimpl.
     //////////////////////////////////////////
 
-	template<class T>
-	struct ConstPropPtr
+    template<class T>
+    struct ConstPropPtr
     {
-    	explicit ConstPropPtr(T* p) : ptr_(p) {}
+        explicit ConstPropPtr(T* p) : ptr_(p) {}
         ~ConstPropPtr() { delete  ptr_; ptr_ = 0; }
-    	T* operator->()    { return  ptr_; }
-    	T& operator*()    { return *ptr_; }
-    	const T* operator->() const	{ return  ptr_; }
-    	const T& operator*()  const	{ return *ptr_; }
+        T* operator->()    { return  ptr_; }
+        T& operator*()    { return *ptr_; }
+        const T* operator->() const    { return  ptr_; }
+        const T& operator*()  const    { return *ptr_; }
     
-	private:
-    	ConstPropPtr();
-    	ConstPropPtr(const ConstPropPtr&);
-    	ConstPropPtr& operator=(const ConstPropPtr&);
-    	T* ptr_;
+    private:
+        ConstPropPtr();
+        ConstPropPtr(const ConstPropPtr&);
+        ConstPropPtr& operator=(const ConstPropPtr&);
+        T* ptr_;
     };
 
 
@@ -66,34 +66,34 @@ namespace Loki
     ///  see test/Pimpl
     ////////////////////////////////////////////////////////////////////////////////
 
-	template
+    template
     <    
-    	class T, 
-    	typename Pointer = ConstPropPtr<T>
+        class T, 
+        typename Pointer = ConstPropPtr<T>
     >
     class Pimpl 
     {
     public:
 
-    	typedef T Impl;
+        typedef T Impl;
 
-    	Pimpl() : ptr_(new T)
+        Pimpl() : ptr_(new T)
         {}
 
         ~Pimpl()
         {
             // Don't compile with incomplete type
             //
-            // If compilation brakes here make sure
+            // If compilation breaks here make sure
             // the compiler does not auto-generate the 
             // destructor of the class hosting the pimpl:
             // - implement the destructor of the class 
             // - don't inline the destructor
-        	typedef char T_must_be_defined[sizeof(T) ? 1 : -1 ];
+            typedef char T_must_be_defined[sizeof(T) ? 1 : -1 ];
         }
 
 
-    	T* operator->()
+        T* operator->()
         {
             return ptr_.operator->();
         }
@@ -113,26 +113,26 @@ namespace Loki
             return ptr_.operator*();
         }
 
-    	Pointer& wrapped()
+        Pointer& wrapped()
         {
-        	return ptr_;
+            return ptr_;
         }
 
-    	const Pointer& wrapped() const
+        const Pointer& wrapped() const
         {
-        	return ptr_;
+            return ptr_;
         }
 
 
     private:
-    	Pimpl(const Pimpl&);
+        Pimpl(const Pimpl&);
         Pimpl& operator=(const Pimpl&);
 
-    	Pointer ptr_;
+        Pointer ptr_;
     };
 
 
-	template<class T, typename Pointer = ConstPropPtr<T> >
+    template<class T, typename Pointer = ConstPropPtr<T> >
     struct PimplOwner 
     {    
         Pimpl<T,Pointer> LOKI_INHERITED_PIMPL_NAME;
@@ -163,7 +163,7 @@ namespace Loki
     template<class T, template<class> class Ptr = ConstPropPtr>
     struct PimplT
     {
-    	typedef T Impl;
+        typedef T Impl;
 
         // declare pimpl
         typedef Pimpl<ImplT<T>, Ptr<ImplT<T> > > Type;
@@ -173,20 +173,20 @@ namespace Loki
     };
 
 
-	template<class T, class UsedPimpl = typename PimplT<T>::Type >
+    template<class T, class UsedPimpl = typename PimplT<T>::Type >
     struct RimplT
     {
-    	typedef typename UsedPimpl::Impl & Type;
+        typedef typename UsedPimpl::Impl & Type;
 
         class Owner
         {
-        	UsedPimpl pimpl;
+            UsedPimpl pimpl;
 
-    	public:
-        	Owner() : LOKI_INHERITED_RIMPL_NAME(*pimpl)
+        public:
+            Owner() : LOKI_INHERITED_RIMPL_NAME(*pimpl)
             {}
 
-        	Type LOKI_INHERITED_RIMPL_NAME;
+            Type LOKI_INHERITED_RIMPL_NAME;
         };
 
     };
@@ -196,6 +196,12 @@ namespace Loki
 #endif
 
 // $Log: Pimpl.h,v $
+// Revision 1.21  2006/06/19 12:39:08  syntheticpp
+// replace tabs with 4 spaces
+//
+// Revision 1.20  2006/03/27 15:33:24  syntheticpp
+// fix spelling
+//
 // Revision 1.19  2006/03/08 17:07:11  syntheticpp
 // replace tabs with 4 spaces in all files
 //

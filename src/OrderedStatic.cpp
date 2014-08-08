@@ -10,10 +10,18 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/src/OrderedStatic.cpp,v 1.6 2006/01/18 17:21:31 lfittl Exp $
+// $Header: /cvsroot/loki-lib/loki/src/OrderedStatic.cpp,v 1.7 2006/03/27 16:09:57 syntheticpp Exp $
 
 #include <loki/OrderedStatic.h>
 #include <limits>
+
+#ifdef min 
+#undef min 
+#endif
+ 
+#ifdef max 
+#undef max 
+#endif 
 
 namespace Loki
 {
@@ -71,6 +79,9 @@ namespace Loki
 }//namespace Loki
 
 // $Log: OrderedStatic.cpp,v $
+// Revision 1.7  2006/03/27 16:09:57  syntheticpp
+// undef all min/max macros, thx to Shen Lei
+//
 // Revision 1.6  2006/01/18 17:21:31  lfittl
 // - Compile library with -Weffc++ and -pedantic (gcc)
 // - Fix most issues raised by using -Weffc++ (initialization lists)

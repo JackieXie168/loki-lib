@@ -2,39 +2,74 @@ SRC = $(wildcard *.cpp)
 STATIC_OBJ = $(SRC:.cpp=.o)
 SHARED_OBJ = $(SRC:.cpp=.lo)
 
-LOKI_VERSION = 0.1.4
-
-STATIC_LIB = ../lib/libloki.a
-SHARED_LIB = ../lib/libloki.so.$(LOKI_VERSION)
-CXXFLAGS = -Wall -Wold-style-cast -Wundef -Wsign-compare -Wconversion -Wpointer-arith -pedantic -O2
 CPPFLAGS = -I../include -DNDEBUG
 
-$(STATIC_LIB): $(STATIC_OBJ)
-	ar rs $(STATIC_LIB) $(STATIC_OBJ)
+STATIC_LIB = libloki.a
 
-$(SHARED_LIB): $(SHARED_OBJ)
-	g++ --shared -Wl,-soname=libloki.so.$(LOKI_VERSION) -o $(SHARED_LIB) $(SHARED_OBJ)
+ifeq ($(OS), Darwin)
+  SHARED_LIB_BASE = libloki.dylib
+  SHARED_LIB_VERSIONED = libloki.$(VERSION).dylib
+  LDFLAGS = -dynamiclib -single_module -install_name $(SHARED_LIB_VERSIONED) -fPIC
+  LDLIBS = -lpthread
+  RESULT_DIR = ../lib/
+else
+ifeq ($(OS), Linux)
+  SHARED_LIB_BASE = libloki.so
+  SHARED_LIB_VERSIONED = libloki.so.$(VERSION)
+  LDFLAGS = --shared -Wl,-soname=$(SHARED_LIB_VERSIONED) -fPIC
+  LDLIBS = -lpthread
+  RESULT_DIR = ../lib/
+else
+  SHARED_LIB_BASE = libloki.dll
+  LDFLAGS = --shared
+  LDLIBS =
+  RESULT_DIR = ../lib/
+endif
+endif
+
+.PHONY: all build-static build-shared clean distclean
+all: build-static build-shared
+build-static: $(RESULT_DIR)$(STATIC_LIB)
+build-shared: $(RESULT_DIR)$(SHARED_LIB_BASE)
+
+clean:
+	$(RM) $(STATIC_OBJ)
+ifneq ($(OS), Windows)
+	$(RM) $(SHARED_OBJ)
+endif
+
+distclean: clean
+	$(RM) $(RESULT_DIR)$(STATIC_LIB)
+	$(RM) $(RESULT_DIR)$(SHARED_LIB_BASE)
+ifneq ($(OS),Windows)
+	$(RM) $(RESULT_DIR)$(SHARED_LIB_VERSIONED)
+
+INSTALL = install
+INSTALL_DATA = $(INSTALL) -m 644
+
+.PHONY: install install-static install-shared
+install: install-static install-shared
+
+install-static: $(RESULT_DIR)$(STATIC_LIB)
+	mkdir -p $(prefix)/lib
+	$(INSTALL_DATA) $(RESULT_DIR)$(STATIC_LIB) $(prefix)/lib
+
+install-shared: $(RESULT_DIR)$(SHARED_LIB_BASE)
+	mkdir -p $(prefix)/lib
+	$(INSTALL_DATA) $(RESULT_DIR)$(SHARED_LIB_BASE) $(prefix)/lib
+	$(INSTALL_DATA) $(RESULT_DIR)$(SHARED_LIB_VERSIONED) $(prefix)/lib
+
+$(RESULT_DIR)$(SHARED_LIB_BASE): $(RESULT_DIR)$(SHARED_LIB_VERSIONED)
+	ln -sf $^ $@
 
 %.lo : %.cpp
 	$(CXX) -c $(CXXFLAGS) -fPIC $(CPPFLAGS) -o $@ $<
 
-.PHONY: build-static build-shared install-static install-shared clean-tmp clean
-build-static: $(STATIC_LIB)
-build-shared: $(SHARED_LIB)
+$(RESULT_DIR)$(SHARED_LIB_VERSIONED): $(SHARED_OBJ)
+else
+$(RESULT_DIR)$(SHARED_LIB_BASE): $(STATIC_OBJ)
+endif
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-install-static: $(STATIC_LIB)
-	mkdir -p $(DESTDIR)/usr/lib
-	install -m 644 $(STATIC_LIB) $(DESTDIR)/usr/lib
-
-install-shared: $(SHARED_LIB)
-	mkdir -p $(DESTDIR)/usr/lib
-	install -m 644 -s $(SHARED_LIB) $(DESTDIR)/usr/lib
-	cd $(DESTDIR)/usr/lib/; ln -s libloki.so.$(LOKI_VERSION) libloki.so
-
-clean-tmp:
-	rm -f $(STATIC_OBJ)
-	rm -f $(SHARED_OBJ)
-
-clean: clean-tmp
-	rm -f $(STATIC_LIB)
-	rm -f $(SHARED_LIB)
+$(RESULT_DIR)$(STATIC_LIB): $(STATIC_OBJ)
+	$(AR) $(ARFLAGS) $@ $^

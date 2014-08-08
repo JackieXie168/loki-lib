@@ -13,7 +13,7 @@
 #ifndef LOKI_FACTORYPARM_INC_
 #define LOKI_FACTORYPARM_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/Factory.h,v 1.16 2006/03/08 16:41:38 syntheticpp Exp $ /cvsroot/loki-lib/loki/include/loki/Factory.h,v 1.15 2006/01/19 23:11:55 lfittl Exp $
+// $Header: /cvsroot/loki-lib/loki/include/loki/Factory.h,v 1.17 2006/05/20 10:23:07 syntheticpp Exp $ /cvsroot/loki-lib/loki/include/loki/Factory.h,v 1.15 2006/01/19 23:11:55 lfittl Exp $
 
 #include "LokiTypeInfo.h"
 #include "Functor.h"
@@ -686,6 +686,13 @@ template <typename AP, typename Id, typename P1 >
 ///  
 ///  Create functions can have up to 15 parameters.
 ///    
+///  \par Singleton lifetime when used with Loki::SingletonHolder
+///  Because Factory uses internally Functors which inherits from 
+///  SmallObject you must use the singleton lifetime
+///  \code Loki::LongevityLifetime::DieAsSmallObjectChild \endcode
+///  Alternatively you could suppress for Functor the inheritance 
+///  from SmallObject by defining the macro:
+/// \code LOKI_FUNCTOR_IS_NOT_A_SMALLOBJECT \endcode
 ////////////////////////////////////////////////////////////////////////////////
     template
     <
@@ -1033,6 +1040,9 @@ template <typename AP, typename Id, typename P1 >
 #endif // FACTORY_INC_
 
 // $Log: Factory.h,v $
+// Revision 1.17  2006/05/20 10:23:07  syntheticpp
+// add warnings in the documentation about the special lifetime when using SmallObjects
+//
 // Revision 1.16  2006/03/08 16:41:38  syntheticpp
 // remove second $
 //

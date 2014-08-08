@@ -16,7 +16,7 @@
 #ifndef LOKI_SMARTPTR_INC_
 #define LOKI_SMARTPTR_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/SmartPtr.h,v 1.24 2006/03/08 17:07:11 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/include/loki/SmartPtr.h,v 1.32 2006/06/19 12:39:08 syntheticpp Exp $
 
 ///  \defgroup  SmartPointerGroup Smart pointers
 ///  Policy based implementation of a smart pointer
@@ -40,8 +40,80 @@
 #include <stdexcept>
 #include <cassert>
 
+#if !defined(_MSC_VER)
+    #include <stdint.h>
+#endif
+
 namespace Loki
 {
+
+////////////////////////////////////////////////////////////////////////////////
+///  \class HeapStorage
+///
+///  \ingroup  SmartPointerStorageGroup 
+///  Implementation of the StoragePolicy used by SmartPtr.  Uses explicit call
+///   to T's destructor followed by call to free.
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class T>
+    class HeapStorage
+    {
+    public:
+        typedef T* StoredType;    // the type of the pointee_ object
+        typedef T* PointerType;   // type returned by operator->
+        typedef T& ReferenceType; // type returned by operator*
+
+        HeapStorage() : pointee_(Default()) 
+        {}
+
+        // The storage policy doesn't initialize the stored pointer 
+        //     which will be initialized by the OwnershipPolicy's Clone fn
+        HeapStorage(const HeapStorage&) : pointee_(0)
+        {}
+
+        template <class U>
+        HeapStorage(const HeapStorage<U>&) : pointee_(0)
+        {}
+        
+        HeapStorage(const StoredType& p) : pointee_(p) {}
+        
+        PointerType operator->() const { return pointee_; }
+        
+        ReferenceType operator*() const { return *pointee_; }
+        
+        void Swap(HeapStorage& rhs)
+        { std::swap(pointee_, rhs.pointee_); }
+    
+        // Accessors
+        friend inline PointerType GetImpl(const HeapStorage& sp)
+        { return sp.pointee_; }
+        
+        friend inline const StoredType& GetImplRef(const HeapStorage& sp)
+        { return sp.pointee_; }
+
+        friend inline StoredType& GetImplRef(HeapStorage& sp)
+        { return sp.pointee_; }
+
+    protected:
+        // Destroys the data stored
+        // (Destruction might be taken over by the OwnershipPolicy)
+        void Destroy()
+        {
+            if ( 0 != pointee_ )
+            {
+                pointee_->~T();
+                ::free( pointee_ );
+            }
+        }
+
+        // Default value to initialize the pointer
+        static StoredType Default()
+        { return 0; }
+    
+    private:
+        // Data
+        StoredType pointee_;
+    };
 
 ////////////////////////////////////////////////////////////////////////////////
 ///  \class DefaultSPStorage
@@ -93,8 +165,10 @@ namespace Loki
         // Destroys the data stored
         // (Destruction might be taken over by the OwnershipPolicy)
         void Destroy()
-        { delete pointee_; }
-        
+        {
+            delete pointee_;
+        }
+
         // Default value to initialize the pointer
         static StoredType Default()
         { return 0; }
@@ -231,6 +305,10 @@ namespace Loki
 ///  Implementation of the OwnershipPolicy used by SmartPtr
 ///  Implements external reference counting for multithreaded programs
 ///  Policy Usage: RefCountedMTAdj<ThreadingModel>::RefCountedMT
+///
+///  \par Warning
+///  There could be a race condition, see bug "Race condition in RefCountedMTAdj::Release"
+///  http://sourceforge.net/tracker/index.php?func=detail&aid=1408845&group_id=29557&atid=396644
 ////////////////////////////////////////////////////////////////////////////////
     
     template <template <class, class> class ThreadingModel,
@@ -386,9 +464,16 @@ namespace Loki
 
             void Swap(RefLinkedBase& rhs);
 
+            bool Merge( RefLinkedBase & rhs );
+
             enum { destructiveCopy = false };
 
         private:
+            static unsigned int CountPrevCycle( const RefLinkedBase * pThis );
+            static unsigned int CountNextCycle( const RefLinkedBase * pThis );
+            bool HasPrevNode( const RefLinkedBase * p ) const;
+            bool HasNextNode( const RefLinkedBase * p ) const;
+
             mutable const RefLinkedBase* prev_;
             mutable const RefLinkedBase* next_;
         };
@@ -411,6 +496,12 @@ namespace Loki
 
         bool Release(const P&)
         { return Private::RefLinkedBase::Release(); }
+
+        template < class P1 >
+        bool Merge( RefLinked< P1 > & rhs )
+        {
+            return Private::RefLinkedBase::Merge( rhs );
+        }
     };
     
 ////////////////////////////////////////////////////////////////////////////////
@@ -793,7 +884,7 @@ namespace Loki
         class ConversionPolicy = DisallowConversion,
         template <class> class CheckingPolicy = AssertCheck,
         template <class> class StoragePolicy = DefaultSPStorage,
-    	template<class> class ConstnessPolicy = LOKI_DEFAULT_CONSTNESS 
+        template<class> class ConstnessPolicy = LOKI_DEFAULT_CONSTNESS 
     >
     struct SmartPtrDef
     {
@@ -804,7 +895,7 @@ namespace Loki
             ConversionPolicy,
             CheckingPolicy,
             StoragePolicy,
-        	ConstnessPolicy
+            ConstnessPolicy
         >
         type;
     };
@@ -983,6 +1074,24 @@ namespace Loki
         friend inline void Reset(SmartPtr& sp, typename SP::StoredType p)
         { SmartPtr(p).Swap(sp); }
 
+        template
+        <
+            typename T1,
+            template <class> class OP1,
+            class CP1,
+            template <class> class KP1,
+            template <class> class SP1,
+            template <class> class CNP1
+        >
+        bool Merge( SmartPtr< T1, OP1, CP1, KP1, SP1, CNP1 > & rhs )
+        {
+            if ( GetImpl( *this ) != GetImpl( rhs ) )
+            {
+                return false;
+            }
+            return OP::Merge( rhs );
+        }
+
         PointerType operator->()
         {
             KP::OnDereference(GetImplRef(*this));
@@ -1009,7 +1118,9 @@ namespace Loki
         
         bool operator!() const // Enables "if (!sp) ..."
         { return GetImpl(*this) == 0; }
-        
+
+        static inline T * GetPointer( const SmartPtr & sp )
+        { return GetImpl( sp ); }
 
         // Ambiguity buster
         template
@@ -1049,6 +1160,51 @@ namespace Loki
         >
         bool operator<(const SmartPtr<T1, OP1, CP1, KP1, SP1, CNP1 >& rhs) const
         { return GetImpl(*this) < GetImpl(rhs); }
+
+        // Ambiguity buster
+        template
+        <
+            typename T1,
+            template <class> class OP1,
+            class CP1,
+            template <class> class KP1,
+            template <class> class SP1,
+            template <class> class CNP1
+        >
+        inline bool operator > ( const SmartPtr< T1, OP1, CP1, KP1, SP1, CNP1 > & rhs )
+        {
+            return ( GetImpl( rhs ) < GetImpl( *this ) );
+        }
+
+        // Ambiguity buster
+        template
+        <
+            typename T1,
+            template <class> class OP1,
+            class CP1,
+            template <class> class KP1,
+            template <class> class SP1,
+            template <class> class CNP1
+        >
+        inline bool operator <= ( const SmartPtr< T1, OP1, CP1, KP1, SP1, CNP1 > & rhs )
+        {
+            return !( GetImpl( rhs ) < GetImpl( *this ) );
+        }
+
+        // Ambiguity buster
+        template
+        <
+            typename T1,
+            template <class> class OP1,
+            class CP1,
+            template <class> class KP1,
+            template <class> class SP1,
+            template <class> class CNP1
+        >
+        inline bool operator >= ( const SmartPtr< T1, OP1, CP1, KP1, SP1, CNP1 > & rhs )
+        {
+            return !( GetImpl( *this ) < GetImpl( rhs ) );
+        }
 
     private:
         // Helper for enabling 'if (sp)'
@@ -1107,7 +1263,7 @@ namespace Loki
     inline bool operator==(const SmartPtr<T, OP, CP, KP, SP, CNP1 >& lhs,
         U* rhs)
     { return GetImpl(lhs) == rhs; }
-    
+
 ////////////////////////////////////////////////////////////////////////////////
 ///  operator== for lhs = raw pointer, rhs = SmartPtr
 ///  \ingroup SmartPointerGroup
@@ -1166,7 +1322,7 @@ namespace Loki
     { return rhs != lhs; }
 
 ////////////////////////////////////////////////////////////////////////////////
-///  operator< for lhs = SmartPtr, rhs = raw pointer -- NOT DEFINED
+///  operator< for lhs = SmartPtr, rhs = raw pointer
 ///  \ingroup SmartPointerGroup
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1181,10 +1337,13 @@ namespace Loki
         typename U
     >
     inline bool operator<(const SmartPtr<T, OP, CP, KP, SP, CNP >& lhs,
-        U* rhs);
-        
+        U* rhs)
+    {
+        return ( GetImpl( lhs ) < rhs );
+    }
+
 ////////////////////////////////////////////////////////////////////////////////
-///  operator< for lhs = raw pointer, rhs = SmartPtr -- NOT DEFINED
+///  operator< for lhs = raw pointer, rhs = SmartPtr
 ///  \ingroup SmartPointerGroup
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1199,10 +1358,13 @@ namespace Loki
         typename U
     >
     inline bool operator<(U* lhs,
-        const SmartPtr<T, OP, CP, KP, SP, CNP >& rhs);
-        
+        const SmartPtr<T, OP, CP, KP, SP, CNP >& rhs)
+    {
+        return ( GetImpl( rhs ) < lhs );
+    }
+
 ////////////////////////////////////////////////////////////////////////////////
-//  operator> for lhs = SmartPtr, rhs = raw pointer -- NOT DEFINED
+//  operator> for lhs = SmartPtr, rhs = raw pointer
 ///  \ingroup SmartPointerGroup
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1361,7 +1523,34 @@ namespace std
 
 #endif // SMARTPTR_INC_
 
+
 // $Log: SmartPtr.h,v $
+// Revision 1.32  2006/06/19 12:39:08  syntheticpp
+// replace tabs with 4 spaces
+//
+// Revision 1.31  2006/05/30 14:30:19  syntheticpp
+// add warning about mt bug
+//
+// Revision 1.30  2006/05/17 16:04:32  syntheticpp
+// undo commit 1.29, reject bug: [ 1459838 ] Loki::COMRefCounted doesn't call AddRef() on assignment
+//
+// Revision 1.29  2006/04/05 22:41:43  rich_sposato
+// Fixed bug 1459838 using fix made by Thomas Albrecht.  (Thanks!)
+// Also added a constructor for NoCheck policy.
+//
+// Revision 1.28  2006/03/27 18:38:30  rich_sposato
+// Added check for NULL pointer in HeapStorage policy.
+//
+// Revision 1.27  2006/03/27 18:34:36  rich_sposato
+// Added HeapStorage policy as mentioned in Feature Request 1441024.
+//
+// Revision 1.26  2006/03/17 22:52:55  rich_sposato
+// Fixed bugs 1452805 and 1451835.  Added Merge ability for RefLink policy.
+// Added more tests for SmartPtr.
+//
+// Revision 1.25  2006/03/17 20:22:14  syntheticpp
+// patch undefined uintptr_t, thx to Regis Desgroppes
+//
 // Revision 1.24  2006/03/08 17:07:11  syntheticpp
 // replace tabs with 4 spaces in all files
 //

@@ -10,7 +10,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/SingletonDll/client.cpp,v 1.4 2006/03/02 21:19:41 lfittl Exp $
+// $Header: /cvsroot/loki-lib/loki/test/SingletonDll/client.cpp,v 1.5 2006/06/19 12:46:22 syntheticpp Exp $
 
 /*
 
@@ -32,15 +32,15 @@ Test for singletons in a shared libraries:
 
 int main()
 {
-	Foo& foo = Singleton<Foo>::Instance();
-	Foo& lokifoo = Loki::Singleton<Foo>::Instance();
-	foo.foo();
-	lokifoo.foo();
+    Foo& foo = Singleton<Foo>::Instance();
+    Foo& lokifoo = Loki::Singleton<Foo>::Instance();
+    foo.foo();
+    lokifoo.foo();
 
 
 #if defined(__BORLANDC__) || defined(_MSC_VER)
     system("PAUSE");
 #endif
 
-	return 0;
+    return 0;
 }

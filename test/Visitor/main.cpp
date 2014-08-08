@@ -10,7 +10,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/Visitor/main.cpp,v 1.4 2006/01/25 18:34:11 rich_sposato Exp $
+// $Header: /cvsroot/loki-lib/loki/test/Visitor/main.cpp,v 1.6 2006/06/19 12:46:22 syntheticpp Exp $
 
 #include <loki/Visitor.h>
 #include <iostream>
@@ -32,8 +32,11 @@ class VariableVisitor :
     public Loki::BaseVisitor, 
     //public Loki::Visitor<Base>,
     //public Loki::Visitor<Type1>
+#ifndef LOKI_DISABLE_TYPELIST_MACROS
     public Loki::Visitor<LOKI_TYPELIST_2(Base,Type1)>
-    //public Loki::Visitor<Loki::Seq<Base,Type1>::Type>
+#else
+    public Loki::Visitor<Loki::Seq<Base,Type1>::Type>
+#endif
 { 
 public: 
     void Visit(Base&){std::cout << "void Visit(Base&)\n";}
@@ -57,8 +60,11 @@ class CVariableVisitor :
     public Loki::BaseVisitor, 
     //public Loki::Visitor<CBase,void,true>,
     //public Loki::Visitor<CType1,void,true>
+#ifndef LOKI_DISABLE_TYPELIST_MACROS
     public Loki::Visitor<LOKI_TYPELIST_2(CBase,CType1),void,true>
-    //public Loki::Visitor<Loki::Seq<CBase,CType1>::Type,void,true>
+#else
+    public Loki::Visitor<Loki::Seq<CBase,CType1>::Type,void,true>
+#endif
 { 
 public: 
     void Visit(const CBase&){std::cout << "void Visit(CBase&)\n";}

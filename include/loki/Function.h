@@ -14,7 +14,7 @@
 
 #define LOKI_ENABLE_FUNCTION
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/Function.h,v 1.9 2006/02/26 23:39:59 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/include/loki/Function.h,v 1.12 2006/06/19 12:18:44 syntheticpp Exp $
 
 #include <loki/Functor.h>
 #include <loki/Sequence.h>
@@ -37,10 +37,9 @@ namespace Loki
     ///
     ///  see also test/Function/FunctionTest.cpp (the modified test program from boost)
     ////////////////////////////////////////////////////////////////////////////////
+    
     template<class R = void()>
-    struct Function : public Functor<R>
-    {
-    };
+    struct Function;
 
 
     template<class R>
@@ -124,6 +123,22 @@ namespace Loki
 ////////////////////////////////////////////////////////////////////////////////
 // repetitions
 ////////////////////////////////////////////////////////////////////////////////
+
+    template<>
+    struct Function<>
+        : public Loki::Functor<>
+    {
+        typedef Functor<> FBase;
+        
+        template<class R2>
+        Function(Function<R2()> func) 
+            LOKI_FUNCTION_R2_CTOR_BODY
+
+        LOKI_FUNCTION_BODY // if compilation breaks here then 
+                           // Function.h was not included before
+                           // Functor.h, check your include order
+                           // or define LOKI_ENABLE_FUNCTION 
+    };
 
     template<class R,class P01>
     struct Function<R(P01)> 
@@ -354,6 +369,15 @@ namespace Loki
 #endif
 
 // $Log: Function.h,v $
+// Revision 1.12  2006/06/19 12:18:44  syntheticpp
+// add hint to fix broken build
+//
+// Revision 1.11  2006/06/09 12:57:15  syntheticpp
+// fix wrong default value handling, gcc fix
+//
+// Revision 1.10  2006/06/09 12:04:40  syntheticpp
+// fix wrong default value handling
+//
 // Revision 1.9  2006/02/26 23:39:59  syntheticpp
 // guard including
 //

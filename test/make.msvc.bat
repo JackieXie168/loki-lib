@@ -7,6 +7,14 @@ cd Factory
 call make.msvc.bat
 cd ..
 
+cd Function
+call make.msvc.bat
+cd ..
+
+cd LockingPtr
+call make.msvc.bat
+cd ..
+
 cd Longevity
 call make.msvc.bat
 cd ..
