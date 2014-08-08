@@ -10,7 +10,8 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/flex_string/main.cpp,v 1.9 2006/01/25 18:34:11 rich_sposato Exp $
+// $Id: main.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+
 
 #ifdef _MSC_VER
 

@@ -10,7 +10,8 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/LockingPtr/main.cpp,v 1.5 2006/04/15 00:41:45 rich_sposato Exp $
+// $Id: main.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+
 
 #define LOKI_CLASS_LEVEL_THREADING
 
@@ -24,7 +25,6 @@
 #include <loki/SafeFormat.h>
 
 using namespace Loki;
-
 
 int g;
 int numThreads = 10;
@@ -60,8 +60,8 @@ struct A
     }
 };
 
-typedef Loki::LockingPtr<A,LOKI_DEFAULT_MUTEX,DontPropagateConst> LPtr;
-typedef Loki::LockingPtr<A,LOKI_DEFAULT_MUTEX,PropagateConst> CLPtr;
+typedef Loki::LockingPtr<A,LOKI_DEFAULT_MUTEX,DontPropagateConst> UserLockingPtr;
+typedef Loki::LockingPtr<A,LOKI_DEFAULT_MUTEX,PropagateConst> ConstUserLockingPtr;
 
 void* RunLocked(void *id)
 {
@@ -69,7 +69,7 @@ void* RunLocked(void *id)
     static Loki::Mutex m;    
     for(int i=0; i<loop; i++)
     {
-        LPtr l(a,m);
+        UserLockingPtr l(a,m);
         l->print(id);
     }
     return 0;
@@ -81,7 +81,7 @@ void* RunConstLocked(void *id)
     static Loki::Mutex m;    
     for(int i=0; i<loop; i++)
     {
-        CLPtr l(a,m);
+        ConstUserLockingPtr l(a,m);
         l->print(id);
     }
     return 0;
@@ -124,6 +124,17 @@ int main ()
 
     Thread::JoinThreads(threads);
     Thread::DeleteThreads(threads);
+
+    
+    // test pair ctor
+    volatile A a;
+    Loki::Mutex m;
+    UserLockingPtr::Pair pair(&a,&m);    
+    UserLockingPtr l( pair );
+    
+    ConstUserLockingPtr::Pair cpair(&a,&m);    
+    ConstUserLockingPtr cl( cpair );
+
 }
 
 

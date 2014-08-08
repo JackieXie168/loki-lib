@@ -13,6 +13,9 @@
 #ifndef COW_STRING_OPT_INC_
 #define COW_STRING_OPT_INC_
 
+// $Id: cowstringopt.h 754 2006-10-17 19:59:11Z syntheticpp $
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // class template CowStringOpt
 // Implements Copy on Write over any storage

@@ -10,7 +10,8 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/Register/foo.cpp,v 1.4 2006/06/19 12:46:22 syntheticpp Exp $
+// $Id: foo.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+
 
 #include "foo.h"
 #include <iostream>

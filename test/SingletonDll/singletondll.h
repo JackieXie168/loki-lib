@@ -12,30 +12,29 @@
 #ifndef LOKI_SINGLETONDLL_H
 #define LOKI_SINGLETONDLL_H
 
-// $Header:
+// $Id: singletondll.h 760 2006-10-17 20:36:13Z syntheticpp $
+
 
 #include "singletondll_export.h"
 
 class Foo;
 
 // Use the predefined Loki::Singleton
-// and export Loki::Singleton<Foo>
+// of loki/Singleton.h and use the export 
+// specifier of the current library
+#define LOKI_SINGLETON_EXPORT SINGLETONDLL_EXPORT
 #include <loki/Singleton.h>
-
-template class SINGLETONDLL_EXPORT Loki::Singleton<Foo>;
 
 
 // declare the Singleton template by yourself
-// and export Singleton<Foo>
-// so the singleton is not in the Loki namespace
+// and export Singleton<Foo>, so the singleton 
+// is not in the Loki namespace
 template<class T>
-class Singleton
+class SINGLETONDLL_EXPORT Singleton
 {
 public:
     static T& Instance();
 };
-
-template class SINGLETONDLL_EXPORT Singleton<Foo>;
 
 
 

@@ -40,7 +40,7 @@
  for how well your compiler can handle Loki.
  */
 
-// $Header: /cvsroot/loki-lib/loki/test/SmallObj/DefaultAlloc.cpp,v 1.1 2005/10/13 00:40:38 rich_sposato Exp $
+// $Id: DefaultAlloc.cpp 761 2006-10-17 20:48:18Z syntheticpp $
 
 
 // ----------------------------------------------------------------------------
@@ -758,8 +758,3 @@ int main( unsigned int argc, const char * const argv[] )
 }
 
 // ----------------------------------------------------------------------------
-
-// $Log: DefaultAlloc.cpp,v $
-// Revision 1.1  2005/10/13 00:40:38  rich_sposato
-// Added program to test how compiler uses default new and delete operators.
-//

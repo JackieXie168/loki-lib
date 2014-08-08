@@ -10,9 +10,11 @@
 // This software is provided "as is" without express or implied warranty.
 //
 ///////////////////////////////////////////////////////////////////////////////
-
 #ifndef THREADSTEST_H
 #define THREADSTEST_H
+
+// $Id: ThreadsTest.h 760 2006-10-17 20:36:13Z syntheticpp $
+
 
 #include <loki/Threads.h>
 #include "UnitTest.h"

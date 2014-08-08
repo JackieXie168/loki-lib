@@ -12,13 +12,11 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
-
-// Last update: June 20, 2001
-
 #ifndef LOKI_ABSTRACTFACTORY_INC_
 #define LOKI_ABSTRACTFACTORY_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/AbstractFactory.h,v 1.4 2006/01/16 19:05:09 rich_sposato Exp $
+// $Id: AbstractFactory.h 771 2006-10-27 18:05:03Z clitte_bbt $
+
 
 #include "Typelist.h"
 #include "Sequence.h"
@@ -26,6 +24,19 @@
 #include "HierarchyGenerators.h"
 
 #include <cassert>
+
+/**
+ * \defgroup	FactoriesGroup Factories
+ * \defgroup	AbstractFactoryGroup Abstract Factory
+ * \ingroup		FactoriesGroup
+ * \brief		Implements an abstract object factory.
+ */
+ 
+/**
+ * \class		AbstractFactory
+ * \ingroup		AbstractFactoryGroup
+ * \brief		Implements an abstract object factory.
+ */
 
 namespace Loki
 {
@@ -110,15 +121,15 @@ namespace Loki
         PrototypeFactoryUnit(AbstractProduct* p = 0)
             : pPrototype_(p)
         {}
-        
-        friend void DoGetPrototype(const PrototypeFactoryUnit& me,
-            AbstractProduct*& pPrototype)
-        { pPrototype = me.pPrototype_; }
-        
-        friend void DoSetPrototype(PrototypeFactoryUnit& me, 
-            AbstractProduct* pObj)
-        { me.pPrototype_ = pObj; }
-        
+
+        template <class CP, class Base1>
+        friend void DoGetPrototype(const PrototypeFactoryUnit<CP, Base1>& me,
+                                   typename Base1::ProductList::Head*& pPrototype);
+
+        template <class CP, class Base1>
+        friend void DoSetPrototype(PrototypeFactoryUnit<CP, Base1>& me,
+                                   typename Base1::ProductList::Head* pObj);
+
         template <class U>
         void GetPrototype(U*& p)
         { return DoGetPrototype(*this, p); }
@@ -136,6 +147,16 @@ namespace Loki
     private:
         AbstractProduct* pPrototype_;
     };
+
+    template <class CP, class Base>
+    inline void DoGetPrototype(const PrototypeFactoryUnit<CP, Base>& me,
+                               typename Base::ProductList::Head*& pPrototype)
+    { pPrototype = me.pPrototype_; }
+
+    template <class CP, class Base>
+    inline void DoSetPrototype(PrototypeFactoryUnit<CP, Base>& me,
+                               typename Base::ProductList::Head* pObj)
+    { me.pPrototype_ = pObj; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // class template ConcreteFactory
@@ -159,16 +180,6 @@ namespace Loki
 
 } // namespace Loki
 
-////////////////////////////////////////////////////////////////////////////////
-// Change log:
-// June 20, 2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
-// September 25, 2004: Fixed bug in PrototypeFactoryUnit::GetPrototype, thanks
-//   to a bug report submitted by funcall.
-////////////////////////////////////////////////////////////////////////////////
 
-#endif // ABSTRACTFACTORY_INC_
+#endif // end file guardian
 
-// $Log: AbstractFactory.h,v $
-// Revision 1.4  2006/01/16 19:05:09  rich_sposato
-// Added cvs keywords.
-//

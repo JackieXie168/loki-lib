@@ -12,13 +12,11 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
-
-// Last update: June 20, 2001
-
 #ifndef LOKI_EMPTYTYPE_INC_
 #define LOKI_EMPTYTYPE_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/EmptyType.h,v 1.3 2006/01/16 19:05:09 rich_sposato Exp $
+// $Id: EmptyType.h 751 2006-10-17 19:50:37Z syntheticpp $
+
 
 namespace Loki
 {
@@ -29,16 +27,23 @@ namespace Loki
 ////////////////////////////////////////////////////////////////////////////////
 
     class EmptyType {};
+    
+    
+    inline bool operator==(const EmptyType&, const EmptyType&)
+    {
+        return true;
+    }   
+
+    inline bool operator<(const EmptyType&, const EmptyType&)
+    {
+        return false;
+    }
+    
+    inline bool operator>(const EmptyType&, const EmptyType&)
+    {
+        return false;
+    }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Change log:
-// June 20, 2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
-////////////////////////////////////////////////////////////////////////////////
+#endif // end file guardian
 
-#endif // EMPTYTYPE_INC_
-
-// $Log: EmptyType.h,v $
-// Revision 1.3  2006/01/16 19:05:09  rich_sposato
-// Added cvs keywords.
-//

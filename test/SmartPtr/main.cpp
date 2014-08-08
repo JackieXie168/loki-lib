@@ -10,7 +10,8 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/SmartPtr/main.cpp,v 1.9 2006/05/30 14:17:05 syntheticpp Exp $
+// $Id: main.cpp 805 2007-01-13 01:47:23Z rich_sposato $
+
 
 // ----------------------------------------------------------------------------
 
@@ -31,8 +32,10 @@ extern void DoStrongReleaseTests( void );
 extern void DoWeakCycleTests( void );
 extern void DoStrongConstTests( void );
 extern void DoStrongForwardReferenceTest( void );
+extern void DoStrongCompareTests( void );
 
 extern void DoLockedPtrTest( void );
+extern void DoLockedStorageTest( void );
 
 unsigned int BaseClass::s_constructions = 0;
 unsigned int BaseClass::s_destructions = 0;
@@ -996,16 +999,22 @@ void DoForwardReferenceTest( void )
     //p6 = p5;
 }
 
-// ----------------------------------------------------------------------------
 
-int main( unsigned int , const char * [] )
+int main( unsigned int argc, const char * argv[] )
 {
+    bool doThreadTest = false;
+    for ( unsigned int ii = 1; ii < argc; ++ii )
+    {
+        if ( ::strcmp( argv[ii], "-t" ) == 0 )
+            doThreadTest = true;
+    }
 
     DoRefLinkTests();
     DoStrongRefCountTests();
     DoStrongReleaseTests();
     DoStrongReleaseTests();
     DoWeakCycleTests();
+    DoStrongCompareTests();
 
     DoForwardReferenceTest();
     DoStrongForwardReferenceTest();
@@ -1022,8 +1031,14 @@ int main( unsigned int , const char * [] )
     DoConstConversionTests();
     DoOwnershipConversionTests();
     DoInheritanceConversionTests();
-    
-    DoLockedPtrTest();
+
+#if defined (LOKI_OBJECT_LEVEL_THREADING) || defined (LOKI_CLASS_LEVEL_THREADING)
+    if ( doThreadTest )
+    {
+        DoLockedStorageTest();
+        DoLockedPtrTest();
+    }
+#endif
 
     // Check that nothing was leaked.
     assert( BaseClass::AllDestroyed() );
@@ -1036,9 +1051,67 @@ int main( unsigned int , const char * [] )
     return 0;
 }
 
+
 // ----------------------------------------------------------------------------
 
-// $Log: main.cpp,v $
+#include <algorithm>
+
+struct Foo
+{
+};
+
+typedef Loki::SmartPtr
+< 
+    BaseClass, RefCounted, DisallowConversion,
+    AssertCheck, DefaultSPStorage, DontPropagateConst 
+> 
+Ptr;
+
+bool Compare( const Ptr&, const Ptr&)
+{
+    return true; 
+}
+
+void friend_handling()
+{
+    // http://sourceforge.net/tracker/index.php?func=detail&aid=1570582&group_id=29557&atid=396644
+
+    // friend injection
+    // see http://gcc.gnu.org/bugzilla/show_bug.cgi?id=28597
+    std::vector<Ptr> vec;
+    std::sort( vec.begin(), vec.end(), Compare );
+    std::nth_element( vec.begin(), vec.begin(), vec.end(), Compare );
+    std::search( vec.begin(), vec.end(),
+        vec.begin(), vec.end(), Compare );
+    Ptr a, b;
+    Compare( a, b );
+
+    // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=29486
+    BaseClass * pNull ;
+    Ptr w1( new BaseClass );
+    Release( w1, pNull );
+
+ }
+
+// ----------------------------------------------------------------------------
+
+// $Log$
+// Revision 1.14  2006/10/17 10:36:08  syntheticpp
+// change line ending
+//
+// Revision 1.13  2006/10/17 10:09:37  syntheticpp
+// add test code for template friends with template template parameters
+//
+// Revision 1.12  2006/10/16 11:48:13  syntheticpp
+// by default Loki is compiled without thread support, so we must disable the dependency on thread classes (StrongPtr) to avaoid linker errors when compiling with the default build process. Should  we change the default threading of Loki?
+//
+// Revision 1.11  2006/10/13 23:59:42  rich_sposato
+// Added check for -t command line parameter to do lock-thread test.
+// Changed ending chars of some lines from LF to CR-LF to be consistent.
+//
+// Revision 1.10  2006/10/11 11:17:53  syntheticpp
+// test injected friends. Thanks to Sigoure Benoit
+//
 // Revision 1.9  2006/05/30 14:17:05  syntheticpp
 // don't confuse with warnings
 //

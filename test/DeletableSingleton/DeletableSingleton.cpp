@@ -8,6 +8,9 @@
 // for any purpose. It is provided "as is" without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
+// $Id: DeletableSingleton.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+
+
 // Show an example of a Loki policy that uses DeletableSingleton.
 //
 // Expected output:

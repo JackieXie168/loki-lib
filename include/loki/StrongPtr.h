@@ -11,13 +11,16 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
+#ifndef LOKI_STRONG_PTR_INC_
+#define LOKI_STRONG_PTR_INC_
 
+// $Id: StrongPtr.h 807 2007-02-25 12:49:19Z syntheticpp $
 
-#ifndef LOKI_STRONG_PTR_H
-#define LOKI_STRONG_PTR_H
 
 #include <loki/SmartPtr.h>
-//#include <loki/LockingPtr.h>
+#if defined (LOKI_OBJECT_LEVEL_THREADING) || defined (LOKI_CLASS_LEVEL_THREADING)
+    #include <loki/Threads.h>
+#endif
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -410,7 +413,14 @@ private:
 ///   directly - which is why it is in a private namespace.  Each instance is a
 ///   shared resource for all copointers, and there should be only one of these
 ///   for each set of copointers.  This class is small, trivial, and inline.
+///
+///  \note This class is not designed for use with a single-threaded model.
+///   Tests using a single-threaded model will not run properly, but tests in a
+///   multi-threaded model with either class-level-locking or object-level-locking
+///   do run properly.
 ////////////////////////////////////////////////////////////////////////////////
+
+#if defined (LOKI_OBJECT_LEVEL_THREADING) || defined (LOKI_CLASS_LEVEL_THREADING)
 
 class LOKI_EXPORT LockableTwoRefCountInfo
     : private Loki::Private::TwoRefCountInfo
@@ -522,6 +532,8 @@ private:
     mutable LOKI_DEFAULT_MUTEX m_Mutex;
 };
 
+#endif // if object-level-locking or class-level-locking
+
 } // end namespace Private
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -577,8 +589,6 @@ protected:
         return m_counts->GetPointerRef();
     }
 
-public:
-
     inline void * GetPointer( void ) const
     {
         return m_counts->GetPointer();
@@ -600,15 +610,44 @@ private:
 ///   shared instance of LockableTwoRefCountInfo.  It behaves very similarly to
 ///   TwoRefCounts, except that it provides thread-safety.  Some functions are
 ///   trivial enough to be inline, while others are implemented elsewhere.
+///
+///  \note This class is not designed for use with a single-threaded model.
+///   Tests using a single-threaded model will not run properly, but tests in a
+///   multi-threaded model with either class-level-locking or object-level-locking
+///   do run properly.
 ////////////////////////////////////////////////////////////////////////////////
+
+#if defined (LOKI_OBJECT_LEVEL_THREADING) || defined (LOKI_CLASS_LEVEL_THREADING)
 
 class LOKI_EXPORT LockableTwoRefCounts
 {
+    typedef SmallValueObject< ::Loki::ClassLevelLockable > ThreadSafePointerAllocator;
+
 protected:
 
-    explicit LockableTwoRefCounts( bool strong );
+    explicit LockableTwoRefCounts( bool strong )
+        : m_counts( NULL )
+    {
+        void * temp = ThreadSafePointerAllocator::operator new(
+            sizeof(Loki::Private::LockableTwoRefCountInfo) );
+#ifdef DO_EXTRA_LOKI_TESTS
+        assert( temp != 0 );
+#endif
+        m_counts = new ( temp ) Loki::Private::LockableTwoRefCountInfo( strong );
+    }
 
-    LockableTwoRefCounts( const void * p, bool strong );
+    LockableTwoRefCounts( const void * p, bool strong )
+        : m_counts( NULL )
+    {
+        void * temp = ThreadSafePointerAllocator::operator new(
+            sizeof(Loki::Private::LockableTwoRefCountInfo) );
+#ifdef DO_EXTRA_LOKI_TESTS
+        assert( temp != 0 );
+#endif
+        void * p2 = const_cast< void * >( p );
+        m_counts = new ( temp )
+            Loki::Private::LockableTwoRefCountInfo( p2, strong );
+    }
 
     LockableTwoRefCounts( const LockableTwoRefCounts & rhs, bool strong ) :
         m_counts( rhs.m_counts )
@@ -631,23 +670,62 @@ protected:
         return Decrement( strong );
     }
 
-    void Increment( bool strong );
+    void Increment( bool strong )
+    {
+        if ( strong )
+        {
+            m_counts->IncStrongCount();
+        }
+        else
+        {
+            m_counts->IncWeakCount();
+        }
+    }
 
-    bool Decrement( bool strong );
+    bool Decrement( bool strong )
+    {
+        if ( strong )
+        {
+            m_counts->DecStrongCount();
+        }
+        else
+        {
+            m_counts->DecWeakCount();
+        }
+        return !m_counts->HasStrongPointer();
+    }
 
     bool HasStrongPointer( void ) const
     {
         return m_counts->HasStrongPointer();
     }
 
-    void Swap( LockableTwoRefCounts & rhs );
+    void Swap( LockableTwoRefCounts & rhs )
+    {
+        std::swap( m_counts, rhs.m_counts );
+    }
 
     void SetPointer( void * p )
     {
         m_counts->SetPointer( p );
     }
 
-    void ZapPointer( void );
+    void ZapPointer( void )
+    {
+#ifdef DO_EXTRA_LOKI_TESTS
+        assert( !m_counts->HasStrongPointer() );
+#endif
+        if ( m_counts->HasWeakPointer() )
+        {
+            m_counts->ZapPointer();
+        }
+        else
+        {
+            ThreadSafePointerAllocator::operator delete ( m_counts,
+                sizeof(Loki::Private::LockableTwoRefCountInfo) );
+            m_counts = NULL;
+        }
+    }
 
     inline void * GetPointer( void ) const
     {
@@ -666,6 +744,8 @@ private:
     /// Pointer to all shared data.
     Loki::Private::LockableTwoRefCountInfo * m_counts;
 };
+
+#endif // if object-level-locking or class-level-locking
 
 ////////////////////////////////////////////////////////////////////////////////
 ///  \class TwoRefLinks
@@ -760,7 +840,7 @@ template
     template < class > class CheckingPolicy = Loki::AssertCheck,
     template < class > class ResetPolicy = Loki::CantResetWithStrong,
     template < class > class DeletePolicy = Loki::DeleteSingle,
-    template < class > class ConstnessPolicy = Loki::LOKI_DEFAULT_CONSTNESS
+    template < class > class ConstnessPolicy = LOKI_DEFAULT_CONSTNESS
 >
 class StrongPtr
     : public OwnershipPolicy
@@ -786,7 +866,7 @@ public:
     typedef typename ConstnessPolicy< T >::Type & ConstReferenceType;
 
 private:
-    struct NeverMatched;
+    struct NeverMatched {};
 
 #ifdef LOKI_SMARTPTR_CONVERSION_CONSTRUCTOR_POLICY
     typedef typename Select< CP::allow, const StoredType&, NeverMatched>::Result ImplicitArg;
@@ -896,7 +976,7 @@ public:
     StrongPtr & operator = (
         const StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & rhs )
     {
-        if ( GetPointer() != rhs.GetPointer() )
+        if ( !rhs.Equals( GetPointer() ) )
         {
             StrongPtr temp( rhs );
             temp.Swap( *this );
@@ -935,6 +1015,9 @@ public:
         }
     }
 
+#ifdef LOKI_ENABLE_FRIEND_TEMPLATE_TEMPLATE_PARAMETER_WORKAROUND
+
+    // old non standard in class definition of friends
     friend bool ReleaseAll( StrongPtr & sp,
         typename StrongPtr::StoredType & p )
     {
@@ -962,6 +1045,40 @@ public:
         sp.OP::SetPointer( p );
         return true;
     }
+
+#else
+  
+    template
+    <
+        typename T1,
+        bool S1,
+        class OP1,
+        class CP1,
+        template < class > class KP1,
+        template < class > class RP1,
+        template < class > class DP1,
+        template < class > class CNP1
+    >
+    friend bool ReleaseAll( StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & sp,
+        typename StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 >::StoredType & p );
+ 
+
+    template
+    <
+        typename T1,
+        bool S1,
+        class OP1,
+        class CP1,
+        template < class > class KP1,
+        template < class > class RP1,
+        template < class > class DP1,
+        template < class > class CNP1
+    >
+    friend bool ResetAll( StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & sp,
+        typename StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 >::StoredType p );
+
+#endif
+
 
     /** Merges ownership of two StrongPtr's that point to same shared object
       but are not copointers.  Requires Merge function in OwnershipPolicy.
@@ -1027,6 +1144,27 @@ public:
         return * GetPointer();
     }
 
+    /// Helper function which can be called to avoid exposing GetPointer function.
+    template < class T1 >
+    bool Equals( const T1 * p ) const
+    {
+        return ( GetPointer() == p );
+    }
+
+    /// Helper function which can be called to avoid exposing GetPointer function.
+    template < class T1 >
+    bool LessThan( const T1 * p ) const
+    {
+        return ( GetPointer() < p );
+    }
+
+    /// Helper function which can be called to avoid exposing GetPointer function.
+    template < class T1 >
+    bool GreaterThan( const T1 * p ) const
+    {
+        return ( GetPointer() > p );
+    }
+
     /// Equality comparison operator is templated to handle ambiguity.
     template
     <
@@ -1042,7 +1180,7 @@ public:
     bool operator == (
         const StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & rhs ) const
     {
-        return ( GetPointer() == rhs.GetPointer() );
+        return ( rhs.Equals( GetPointer() ) );
     }
 
     /// Inequality comparison operator is templated to handle ambiguity.
@@ -1060,7 +1198,7 @@ public:
     bool operator != (
         const StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & rhs ) const
     {
-        return ( GetPointer() != rhs.GetPointer() );
+        return !( rhs.Equals( GetPointer() ) );
     }
 
     /// Less-than comparison operator is templated to handle ambiguity.
@@ -1078,7 +1216,7 @@ public:
     bool operator < (
         const StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & rhs ) const
     {
-        return ( GetPointer() < rhs.GetPointer() );
+        return ( rhs.GreaterThan( GetPointer() ) );
     }
 
     /// Greater-than comparison operator is templated to handle ambiguity.
@@ -1096,7 +1234,7 @@ public:
     inline bool operator > (
         const StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & rhs ) const
     {
-        return ( rhs.GetPointer() < GetPointer() );
+        return ( rhs.LessThan( GetPointer() ) );
     }
 
     /// Less-than-or-equal-to operator is templated to handle ambiguity.
@@ -1114,7 +1252,7 @@ public:
     inline bool operator <= (
         const StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & rhs ) const
     {
-        return !( rhs.GetPointer() < GetPointer() );
+        return !( rhs.LessThan( GetPointer() ) );
     }
 
     /// Greater-than-or-equal-to operator is templated to handle ambiguity.
@@ -1132,13 +1270,15 @@ public:
     inline bool operator >= (
         const StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & rhs ) const
     {
-        return !( GetPointer() < rhs.GetPointer() );
+        return !( rhs.GreaterThan( GetPointer() ) );
     }
 
     inline bool operator ! () const // Enables "if ( !sp ) ..."
     {
         return ( 0 == OP::GetPointer() );
     }
+
+protected:
 
     inline PointerType GetPointer( void )
     {
@@ -1201,6 +1341,64 @@ public:
 
 // ----------------------------------------------------------------------------
 
+// friend functions
+
+#ifndef LOKI_ENABLE_FRIEND_TEMPLATE_TEMPLATE_PARAMETER_WORKAROUND
+
+template
+<
+    typename U,
+    typename T,
+    bool S,
+    class OP,
+    class CP,
+    template < class > class KP,
+    template < class > class RP,
+    template < class > class DP,
+    template < class > class CNP
+>
+bool ReleaseAll( StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & sp,
+                 typename StrongPtr< T, S, OP, CP, KP, RP, DP, CNP >::StoredType & p )
+{
+  if ( !sp.RP<T>::OnReleaseAll( sp.IsStrong() || sp.OP::HasStrongPointer() ) )
+  {
+    return false;
+  }
+  p = sp.GetPointer();
+  sp.OP::SetPointer( sp.DP<T>::Default() );
+  return true;
+}
+
+template
+<
+    typename U,
+    typename T,
+    bool S,
+    class OP,
+    class CP,
+    template < class > class KP,
+    template < class > class RP,
+    template < class > class DP,
+    template < class > class CNP
+>
+bool ResetAll( StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & sp,
+               typename StrongPtr< T, S, OP, CP, KP, RP, DP, CNP >::StoredType p )
+{
+  if ( sp.OP::GetPointer() == p )
+  {
+    return true;
+  }
+  if ( !sp.RP<T>::OnResetAll( sp.IsStrong() || sp.OP::HasStrongPointer() ) )
+  {
+    return false;
+  }
+  sp.DP<T>::Delete( sp.GetPointer() );
+  sp.OP::SetPointer( p );
+  return true;
+}
+#endif
+
+
 // free comparison operators for class template StrongPtr
 
 ///  operator== for lhs = StrongPtr, rhs = raw pointer
@@ -1220,7 +1418,7 @@ template
 inline bool operator == (
     const StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & lhs, U * rhs )
 {
-    return ( lhs.GetPointer() == rhs );
+    return ( lhs.Equals( rhs ) );
 }
 
 ///  operator== for lhs = raw pointer, rhs = StrongPtr
@@ -1240,7 +1438,7 @@ template
 inline bool operator == ( U * lhs,
     const StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & rhs )
 {
-    return ( rhs.GetPointer() == lhs );
+    return ( rhs.Equals( lhs ) );
 }
 
 ///  operator!= for lhs = StrongPtr, rhs = raw pointer
@@ -1260,7 +1458,7 @@ template
 inline bool operator != (
     const StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & lhs, U * rhs )
 {
-    return !( lhs.GetPointer() == rhs );
+    return !( lhs.Equals( rhs ) );
 }
 
 ///  operator!= for lhs = raw pointer, rhs = StrongPtr
@@ -1280,7 +1478,7 @@ template
 inline bool operator != ( U * lhs,
     const StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & rhs )
 {
-    return ( rhs.GetPointer() != lhs );
+    return !( rhs.Equals( lhs ) );
 }
 
 ///  operator< for lhs = StrongPtr, rhs = raw pointer
@@ -1300,7 +1498,7 @@ template
 inline bool operator < (
     const StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & lhs, U * rhs )
 {
-    return ( lhs.GetPointer() < rhs );
+    return ( lhs.LessThan( rhs ) );
 }
 
 ///  operator< for lhs = raw pointer, rhs = StrongPtr
@@ -1320,7 +1518,7 @@ template
 inline bool operator < ( U * lhs,
     const StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & rhs )
 {
-    return ( lhs < rhs.GetPointer() );
+    return ( rhs.GreaterThan( lhs ) );
 }
 
 //  operator> for lhs = StrongPtr, rhs = raw pointer
@@ -1340,7 +1538,7 @@ template
 inline bool operator > (
     const StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & lhs, U * rhs )
 {
-    return ( rhs < lhs.GetPointer() );
+    return ( lhs.GreaterThan( rhs ) );
 }
 
 ///  operator> for lhs = raw pointer, rhs = StrongPtr
@@ -1360,7 +1558,7 @@ template
 inline bool operator > ( U * lhs,
     const StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & rhs )
 {
-    return ( rhs.GetPointer() < lhs );
+    return ( rhs.LessThan( lhs ) );
 }
 
 ///  operator<= for lhs = StrongPtr, rhs = raw pointer
@@ -1380,7 +1578,7 @@ template
 inline bool operator <= (
     const StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & lhs, U * rhs )
 {
-    return !( rhs < lhs.GetPointer() );
+    return !( lhs.GreaterThan( rhs ) );
 }
 
 ///  operator<= for lhs = raw pointer, rhs = StrongPtr
@@ -1400,7 +1598,7 @@ template
 inline bool operator <= ( U * lhs,
     const StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & rhs )
 {
-    return !( rhs.GetPointer() < lhs );
+    return !( rhs.LessThan( lhs ) );
 }
 
 ///  operator>= for lhs = StrongPtr, rhs = raw pointer
@@ -1420,7 +1618,7 @@ template
 inline bool operator >= (
     const StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & lhs, U * rhs )
 {
-    return !( lhs.GetPointer() < rhs );
+    return !( lhs.LessThan( rhs ) );
 }
 
 ///  operator>= for lhs = raw pointer, rhs = StrongPtr
@@ -1440,7 +1638,7 @@ template
 inline bool operator >= ( U * lhs,
     const StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & rhs )
 {
-    return !( lhs < rhs.GetPointer() );
+    return !( rhs.GreaterThan( lhs ) );
 }
 
 } // namespace Loki
@@ -1471,7 +1669,7 @@ namespace std
             const Loki::StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & lhs,
             const Loki::StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & rhs ) const
         {
-            return less< T * >()( lhs.GetPointer(), rhs.GetPointer() );
+            return ( lhs < rhs );
         }
     };
 }
@@ -1480,27 +1678,3 @@ namespace std
 
 #endif // end file guardian
 
-// $Log: StrongPtr.h,v $
-// Revision 1.7  2006/05/20 10:25:08  syntheticpp
-// enable documentation by removing doxygen warning
-//
-// Revision 1.6  2006/04/21 21:45:17  rich_sposato
-// Corrected comments.  Added operator= function.  Improved efficiency of
-// dtor.  Other minor changes.
-//
-// Revision 1.5  2006/04/19 01:04:26  rich_sposato
-// Changed DeleteSingle and DeleteArray policy to not allow use of incomplete
-// types.
-//
-// Revision 1.4  2006/04/16 14:08:46  syntheticpp
-// change init order to inheritance order
-//
-// Revision 1.3  2006/04/16 13:36:26  syntheticpp
-// gcc pedantic fix
-//
-// Revision 1.2  2006/04/06 06:05:20  rich_sposato
-// Added LOKI_EXPORT macro.
-//
-// Revision 1.1  2006/04/05 22:56:58  rich_sposato
-// Added StrongPtr class to Loki along with tests for StrongPtr.
-//

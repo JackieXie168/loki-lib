@@ -12,13 +12,11 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
-
-// Last update, July 26, 2005
-
-// $Header: /cvsroot/loki-lib/loki/include/loki/TypeManip.h,v 1.8 2006/01/16 19:05:09 rich_sposato Exp $
-
 #ifndef LOKI_TYPEMANIP_INC_
 #define LOKI_TYPEMANIP_INC_
+
+// $Id: TypeManip.h 749 2006-10-17 19:49:26Z syntheticpp $
+
 
 namespace Loki
 {
@@ -281,27 +279,6 @@ struct SuperSubclassStrict<T, void>
 #define LOKI_SUPERSUBCLASS_STRICT(T, U) \
     ::Loki::SuperSubclassStrict<T,U>::value
 
-////////////////////////////////////////////////////////////////////////////////
-// Change log:
-// June 20, 2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
-// November 22, 2001: minor change to support porting to boost
-// November 22, 2001: fixed bug in Conversion<void, T>
-//      (credit due to Brad Town)
-// November 23, 2001: (well it's 12:01 am) fixed bug in SUPERSUBCLASS - added
-//      the volatile qualifier to be 100% politically correct
-// September 16, 2002: Changed "const volatile" to "const volatile *", to enable
-//     conversion to succeed. Done earlier by MKH.
-//     Added SuperSubclass and SuperSubclassStrict templates. The corresponding
-//     macros are deprecated.
-//     Added extra parenthesis in sizeof in Conversion, to disambiguate function
-//     call from function declaration. T.S.
-// July 27, 2005 : compiler error on using SuperSubclass/Strict with incomplete types
-//                 (credit due to Mark Stevans) by Peter Kümmel
-////////////////////////////////////////////////////////////////////////////////
 
-#endif // TYPEMANIP_INC_
+#endif // end file guardian
 
-// $Log: TypeManip.h,v $
-// Revision 1.8  2006/01/16 19:05:09  rich_sposato
-// Added cvs keywords.
-//

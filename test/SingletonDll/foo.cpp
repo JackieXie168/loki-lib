@@ -10,7 +10,8 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header:
+// $Id: foo.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+
 
 #include "foo.h"
 #include <iostream>

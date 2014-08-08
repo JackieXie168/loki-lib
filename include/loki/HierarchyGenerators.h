@@ -12,11 +12,11 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
-
 #ifndef LOKI_HIERARCHYGENERATORS_INC_
 #define LOKI_HIERARCHYGENERATORS_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/HierarchyGenerators.h,v 1.5 2006/01/16 19:05:09 rich_sposato Exp $
+// $Id: HierarchyGenerators.h 751 2006-10-17 19:50:37Z syntheticpp $
+
 
 #include "Typelist.h"
 #include "TypeTraits.h"
@@ -287,17 +287,5 @@ namespace Loki
 #endif
 }   // namespace Loki
 
-////////////////////////////////////////////////////////////////////////////////
-// Change log:
-// June 20, 2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
-// September 16, 2002: Fixed dependent template, using "::template" syntax. T.S.
-//
-// $Log:
-////////////////////////////////////////////////////////////////////////////////
+#endif // end file guardian
 
-#endif // HIERARCHYGENERATORS_INC_
-
-// $Log: HierarchyGenerators.h,v $
-// Revision 1.5  2006/01/16 19:05:09  rich_sposato
-// Added cvs keywords.
-//

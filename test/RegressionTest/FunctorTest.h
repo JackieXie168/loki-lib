@@ -11,11 +11,11 @@
 // This software is provided "as is" without express or implied warranty.
 //
 ///////////////////////////////////////////////////////////////////////////////
-
-// $Header:
-
 #ifndef FUNCTORTEST_H
 #define FUNCTORTEST_H
+
+// $Id: FunctorTest.h 760 2006-10-17 20:36:13Z syntheticpp $
+
 
 #include <loki/Functor.h>
 

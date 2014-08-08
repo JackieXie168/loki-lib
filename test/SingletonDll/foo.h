@@ -12,7 +12,8 @@
 #ifndef LOKI_FOO_H
 #define LOKI_FOO_H
 
-// $Header:
+// $Id: foo.h 760 2006-10-17 20:36:13Z syntheticpp $
+
 
 #include "foo_export.h"
 

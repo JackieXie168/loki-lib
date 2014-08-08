@@ -12,11 +12,11 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
-
 #ifndef LOKI_SMARTPTR_INC_
 #define LOKI_SMARTPTR_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/SmartPtr.h,v 1.32 2006/06/19 12:39:08 syntheticpp Exp $
+// $Id: SmartPtr.h 791 2006-12-15 01:36:29Z rich_sposato $
+
 
 ///  \defgroup  SmartPointerGroup Smart pointers
 ///  Policy based implementation of a smart pointer
@@ -39,10 +39,17 @@
 #include <functional>
 #include <stdexcept>
 #include <cassert>
+#include <string>
 
 #if !defined(_MSC_VER)
     #include <stdint.h>
 #endif
+
+#if defined(_MSC_VER) || defined(__GNUC__)
+// GCC>=4.1 must use -ffriend-injection due to a bug in GCC
+#define LOKI_ENABLE_FRIEND_TEMPLATE_TEMPLATE_PARAMETER_WORKAROUND
+#endif
+
 
 namespace Loki
 {
@@ -55,13 +62,15 @@ namespace Loki
 ///   to T's destructor followed by call to free.
 ////////////////////////////////////////////////////////////////////////////////
 
+
     template <class T>
     class HeapStorage
     {
     public:
-        typedef T* StoredType;    // the type of the pointee_ object
-        typedef T* PointerType;   // type returned by operator->
-        typedef T& ReferenceType; // type returned by operator*
+        typedef T* StoredType;      /// the type of the pointee_ object
+        typedef T* InitPointerType; /// type used to declare OwnershipPolicy type.
+        typedef T* PointerType;     /// type returned by operator->
+        typedef T& ReferenceType;   /// type returned by operator*
 
         HeapStorage() : pointee_(Default()) 
         {}
@@ -85,14 +94,14 @@ namespace Loki
         { std::swap(pointee_, rhs.pointee_); }
     
         // Accessors
-        friend inline PointerType GetImpl(const HeapStorage& sp)
-        { return sp.pointee_; }
-        
-        friend inline const StoredType& GetImplRef(const HeapStorage& sp)
-        { return sp.pointee_; }
+        template <class F>
+        friend typename HeapStorage<F>::PointerType GetImpl(const HeapStorage<F>& sp);
 
-        friend inline StoredType& GetImplRef(HeapStorage& sp)
-        { return sp.pointee_; }
+        template <class F>
+        friend const typename HeapStorage<F>::StoredType& GetImplRef(const HeapStorage<F>& sp);
+
+        template <class F>
+        friend typename HeapStorage<F>::StoredType& GetImplRef(HeapStorage<F>& sp);
 
     protected:
         // Destroys the data stored
@@ -115,6 +124,19 @@ namespace Loki
         StoredType pointee_;
     };
 
+    template <class T>
+    inline typename HeapStorage<T>::PointerType GetImpl(const HeapStorage<T>& sp)
+    { return sp.pointee_; }
+
+    template <class T>
+    inline const typename HeapStorage<T>::StoredType& GetImplRef(const HeapStorage<T>& sp)
+    { return sp.pointee_; }
+
+    template <class T>
+    inline typename HeapStorage<T>::StoredType& GetImplRef(HeapStorage<T>& sp)
+    { return sp.pointee_; }
+
+
 ////////////////////////////////////////////////////////////////////////////////
 ///  \class DefaultSPStorage
 ///
@@ -122,11 +144,13 @@ namespace Loki
 ///  Implementation of the StoragePolicy used by SmartPtr
 ////////////////////////////////////////////////////////////////////////////////
 
+
     template <class T>
     class DefaultSPStorage
     {
     public:
         typedef T* StoredType;    // the type of the pointee_ object
+        typedef T* InitPointerType; /// type used to declare OwnershipPolicy type.
         typedef T* PointerType;   // type returned by operator->
         typedef T& ReferenceType; // type returned by operator*
 
@@ -152,14 +176,14 @@ namespace Loki
         { std::swap(pointee_, rhs.pointee_); }
     
         // Accessors
-        friend inline PointerType GetImpl(const DefaultSPStorage& sp)
-        { return sp.pointee_; }
-        
-        friend inline const StoredType& GetImplRef(const DefaultSPStorage& sp)
-        { return sp.pointee_; }
+        template <class F>
+        friend typename DefaultSPStorage<F>::PointerType GetImpl(const DefaultSPStorage<F>& sp);
 
-        friend inline StoredType& GetImplRef(DefaultSPStorage& sp)
-        { return sp.pointee_; }
+        template <class F>
+        friend const typename DefaultSPStorage<F>::StoredType& GetImplRef(const DefaultSPStorage<F>& sp);
+
+        template <class F>
+        friend typename DefaultSPStorage<F>::StoredType& GetImplRef(DefaultSPStorage<F>& sp);
 
     protected:
         // Destroys the data stored
@@ -178,7 +202,145 @@ namespace Loki
         StoredType pointee_;
     };
 
-    
+    template <class T>
+    inline typename DefaultSPStorage<T>::PointerType GetImpl(const DefaultSPStorage<T>& sp)
+    { return sp.pointee_; }
+
+    template <class T>
+    inline const typename DefaultSPStorage<T>::StoredType& GetImplRef(const DefaultSPStorage<T>& sp)
+    { return sp.pointee_; }
+
+    template <class T>
+    inline typename DefaultSPStorage<T>::StoredType& GetImplRef(DefaultSPStorage<T>& sp)
+    { return sp.pointee_; }
+
+
+////////////////////////////////////////////////////////////////////////////////
+///  \class LockedStorage
+///
+///  \ingroup  SmartPointerStorageGroup 
+///  Implementation of the StoragePolicy used by SmartPtr.
+///
+///  Each call to operator-> locks the object for the duration of a call to a
+///  member function of T.
+///
+///  \par How It Works
+///  LockedStorage has a helper class called Locker, which acts as a smart
+///  pointer with limited abilities.  LockedStorage::operator-> returns an
+///  unnamed temporary of type Locker<T> that exists for the duration of the
+///  call to a member function of T.  The unnamed temporary locks the object
+///  when it is constructed by operator-> and unlocks the object when it is
+///  destructed.
+///
+///  \note This storage policy requires class T to have member functions Lock
+///  and Unlock.  If your class does not have Lock or Unlock functions, you may
+///  either make a child class which does, or make a policy class similar to
+///  LockedStorage which calls other functions to lock the object.
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class T>
+    class Locker
+    {
+    public:
+        Locker( const T * p ) : pointee_( const_cast< T * >( p ) )
+        {
+            if ( pointee_ != 0 )
+                pointee_->Lock();
+        }
+
+        ~Locker( void )
+        {
+            if ( pointee_ != 0 )
+                pointee_->Unlock();
+        }
+
+        operator T * ()
+        {
+            return pointee_;
+        }
+
+        T * operator->()
+        {
+            return pointee_;
+        }
+
+    private:
+        Locker( void );
+        Locker & operator = ( const Locker & );
+        T * pointee_;
+    };
+
+    template <class T>
+    class LockedStorage
+    {
+    public:
+
+        typedef T* StoredType;           /// the type of the pointee_ object
+        typedef T* InitPointerType;      /// type used to declare OwnershipPolicy type.
+        typedef Locker< T > PointerType; /// type returned by operator->
+        typedef T& ReferenceType;        /// type returned by operator*
+
+        LockedStorage() : pointee_( Default() ) {}
+
+        ~LockedStorage( void ) {}
+
+        LockedStorage( const LockedStorage&) : pointee_( 0 ) {}
+
+        LockedStorage( const StoredType & p ) : pointee_( p ) {}
+
+        PointerType operator->()
+        {
+            return Locker< T >( pointee_ );
+        }
+
+        void Swap(LockedStorage& rhs)
+        {
+            std::swap( pointee_, rhs.pointee_ );
+        }
+
+        // Accessors
+        template <class F>
+        friend typename LockedStorage<F>::InitPointerType GetImpl(const LockedStorage<F>& sp);
+
+        template <class F>
+        friend const typename LockedStorage<F>::StoredType& GetImplRef(const LockedStorage<F>& sp);
+
+        template <class F>
+        friend typename LockedStorage<F>::StoredType& GetImplRef(LockedStorage<F>& sp);
+
+    protected:
+        // Destroys the data stored
+        // (Destruction might be taken over by the OwnershipPolicy)
+        void Destroy()
+        {
+            delete pointee_;
+        }
+
+        // Default value to initialize the pointer
+        static StoredType Default()
+        { return 0; }
+
+    private:
+        /// Dereference operator is not implemented.
+        ReferenceType operator*();
+
+        // Data
+        StoredType pointee_;
+    };
+
+    template <class T>
+    inline typename LockedStorage<T>::InitPointerType GetImpl(const LockedStorage<T>& sp)
+    { return sp.pointee_; }
+
+    template <class T>
+    inline const typename LockedStorage<T>::StoredType& GetImplRef(const LockedStorage<T>& sp)
+    { return sp.pointee_; }
+
+    template <class T>
+    inline typename LockedStorage<T>::StoredType& GetImplRef(LockedStorage<T>& sp)
+    { return sp.pointee_; }
+
+
 ////////////////////////////////////////////////////////////////////////////////
 ///  \class ArrayStorage
 ///
@@ -186,11 +348,13 @@ namespace Loki
 ///  Implementation of the ArrayStorage used by SmartPtr
 ////////////////////////////////////////////////////////////////////////////////
 
+
     template <class T>
     class ArrayStorage
     {
     public:
         typedef T* StoredType;    // the type of the pointee_ object
+        typedef T* InitPointerType; /// type used to declare OwnershipPolicy type.
         typedef T* PointerType;   // type returned by operator->
         typedef T& ReferenceType; // type returned by operator*
 
@@ -216,14 +380,14 @@ namespace Loki
         { std::swap(pointee_, rhs.pointee_); }
     
         // Accessors
-        friend inline PointerType GetImpl(const ArrayStorage& sp)
-        { return sp.pointee_; }
-        
-        friend inline const StoredType& GetImplRef(const ArrayStorage& sp)
-        { return sp.pointee_; }
+        template <class F>
+        friend typename ArrayStorage<F>::PointerType GetImpl(const ArrayStorage<F>& sp);
 
-        friend inline StoredType& GetImplRef(ArrayStorage& sp)
-        { return sp.pointee_; }
+        template <class F>
+        friend const typename ArrayStorage<F>::StoredType& GetImplRef(const ArrayStorage<F>& sp);
+
+        template <class F>
+        friend typename ArrayStorage<F>::StoredType& GetImplRef(ArrayStorage<F>& sp);
 
     protected:
         // Destroys the data stored
@@ -239,6 +403,18 @@ namespace Loki
         // Data
         StoredType pointee_;
     };
+
+    template <class T>
+    inline typename ArrayStorage<T>::PointerType GetImpl(const ArrayStorage<T>& sp)
+    { return sp.pointee_; }
+
+    template <class T>
+    inline const typename ArrayStorage<T>::StoredType& GetImplRef(const ArrayStorage<T>& sp)
+    { return sp.pointee_; }
+
+    template <class T>
+    inline typename ArrayStorage<T>::StoredType& GetImplRef(ArrayStorage<T>& sp)
+    { return sp.pointee_; }
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -731,7 +907,7 @@ namespace Loki
 
     struct NullPointerException : public std::runtime_error
     {
-        NullPointerException() : std::runtime_error("")
+        NullPointerException() : std::runtime_error(std::string(""))
         { }
         const char* what() const throw()
         { return "Null Pointer Exception"; }
@@ -930,12 +1106,12 @@ namespace Loki
     >
     class SmartPtr
         : public StoragePolicy<T>
-        , public OwnershipPolicy<typename StoragePolicy<T>::PointerType>
+        , public OwnershipPolicy<typename StoragePolicy<T>::InitPointerType>
         , public CheckingPolicy<typename StoragePolicy<T>::StoredType>
         , public ConversionPolicy
     {
         typedef StoragePolicy<T> SP;
-        typedef OwnershipPolicy<typename StoragePolicy<T>::PointerType> OP;
+        typedef OwnershipPolicy<typename StoragePolicy<T>::InitPointerType> OP;
         typedef CheckingPolicy<typename StoragePolicy<T>::StoredType> KP;
         typedef ConversionPolicy CP;
         
@@ -951,7 +1127,7 @@ namespace Loki
                 CopyArg;
     
     private:
-        struct NeverMatched;
+        struct NeverMatched {};
        
 #ifdef LOKI_SMARTPTR_CONVERSION_CONSTRUCTOR_POLICY
         typedef typename Select< CP::allow, const StoredType&, NeverMatched>::Result ImplicitArg;
@@ -964,18 +1140,25 @@ namespace Loki
     public:
 
         SmartPtr()
-        { KP::OnDefault(GetImpl(*this)); }
+        {
+            KP::OnDefault(GetImpl(*this));
+        }
         
         explicit
         SmartPtr(ExplicitArg p) : SP(p)
-        { KP::OnInit(GetImpl(*this)); }
+        {
+            KP::OnInit(GetImpl(*this));
+        }
 
         SmartPtr(ImplicitArg p) : SP(p)
-        { KP::OnInit(GetImpl(*this)); }
+        {
+            KP::OnInit(GetImpl(*this));
+        }
 
-        SmartPtr(CopyArg& rhs)
-        : SP(rhs), OP(rhs), KP(rhs), CP(rhs)
-        { GetImplRef(*this) = OP::Clone(GetImplRef(rhs)); }
+        SmartPtr(CopyArg& rhs) : SP(rhs), OP(rhs), KP(rhs), CP(rhs)
+        {
+            GetImplRef(*this) = OP::Clone(GetImplRef(rhs));
+        }
 
         template
         <
@@ -1001,7 +1184,9 @@ namespace Loki
         >
         SmartPtr(SmartPtr<T1, OP1, CP1, KP1, SP1, CNP1 >& rhs)
         : SP(rhs), OP(rhs), KP(rhs), CP(rhs)
-        { GetImplRef(*this) = OP::Clone(GetImplRef(rhs)); }
+        {
+            GetImplRef(*this) = OP::Clone(GetImplRef(rhs));
+        }
 
         SmartPtr(RefToValue<SmartPtr> rhs)
         : SP(rhs), OP(rhs), KP(rhs), CP(rhs)
@@ -1064,7 +1249,10 @@ namespace Loki
                 SP::Destroy();
             }
         }
-        
+
+#ifdef LOKI_ENABLE_FRIEND_TEMPLATE_TEMPLATE_PARAMETER_WORKAROUND
+
+        // old non standard in class definition of friends
         friend inline void Release(SmartPtr& sp, typename SP::StoredType& p)
         {
             p = GetImplRef(sp);
@@ -1073,6 +1261,34 @@ namespace Loki
         
         friend inline void Reset(SmartPtr& sp, typename SP::StoredType p)
         { SmartPtr(p).Swap(sp); }
+
+#else
+
+        template
+        <
+            typename T1,
+            template <class> class OP1,
+            class CP1,
+            template <class> class KP1,
+            template <class> class SP1,
+            template <class> class CNP1
+        >
+        friend void Release(SmartPtr<T1, OP1, CP1, KP1, SP1, CNP1>& sp,
+                            typename SP1<T1>::StoredType& p);
+
+        template
+        <
+            typename T1,
+            template <class> class OP1,
+            class CP1,
+            template <class> class KP1,
+            template <class> class SP1,
+            template <class> class CNP1
+        >
+        friend void Reset(SmartPtr<T1, OP1, CP1, KP1, SP1, CNP1>& sp,
+                          typename SP1<T1>::StoredType p);
+#endif
+
 
         template
         <
@@ -1089,7 +1305,7 @@ namespace Loki
             {
                 return false;
             }
-            return OP::Merge( rhs );
+            return OP::template Merge( rhs );
         }
 
         PointerType operator->()
@@ -1240,6 +1456,44 @@ namespace Loki
         operator AutomaticConversionResult() const
         { return GetImpl(*this); }
     };
+
+
+////////////////////////////////////////////////////////////////////////////////
+// friends
+////////////////////////////////////////////////////////////////////////////////
+
+#ifndef LOKI_ENABLE_FRIEND_TEMPLATE_TEMPLATE_PARAMETER_WORKAROUND
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        template <class> class CNP
+    >
+    inline void Release(SmartPtr<T, OP, CP, KP, SP, CNP>& sp,
+                        typename SP<T>::StoredType& p)
+    {
+      p = GetImplRef(sp);
+      GetImplRef(sp) = SP<T>::Default();
+    }
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        template <class> class CNP
+    >
+    inline void Reset(SmartPtr<T, OP, CP, KP, SP, CNP>& sp,
+                      typename SP<T>::StoredType p)
+    { SmartPtr<T, OP, CP, KP, SP, CNP>(p).Swap(sp); }
+
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // free comparison operators for class template SmartPtr
@@ -1505,99 +1759,5 @@ namespace std
     };
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Change log:
-// June 20,     2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
-// December 09, 2001: Included <cassert>
-// February 2,  2003: fixed dependent names - credit due to Rani Sharoni
-// August   21, 2003: Added support for policy based explicit/implicit constructor.
-//  The new code will be effective if a macro named 
-//  *** LOKI_SMARTPTR_CONVERSION_CONSTRUCTOR_POLICY ***
-//  is defined (due to backward computability concerns).
-//  In case that the macro is defined and the conversion policy allow flag is off 
-//  (e.g. DisallowConversion) then the conversion from the "pointer" to the 
-//  SmartPtr must be explicit.
-// October 21, 2005: fix void Swap(RefLinkedBase& rhs). Peter Kümmel
-// November 3, 2005: doxygen like documentation. Peter Kümmel
-////////////////////////////////////////////////////////////////////////////////
+#endif // end file guardian
 
-#endif // SMARTPTR_INC_
-
-
-// $Log: SmartPtr.h,v $
-// Revision 1.32  2006/06/19 12:39:08  syntheticpp
-// replace tabs with 4 spaces
-//
-// Revision 1.31  2006/05/30 14:30:19  syntheticpp
-// add warning about mt bug
-//
-// Revision 1.30  2006/05/17 16:04:32  syntheticpp
-// undo commit 1.29, reject bug: [ 1459838 ] Loki::COMRefCounted doesn't call AddRef() on assignment
-//
-// Revision 1.29  2006/04/05 22:41:43  rich_sposato
-// Fixed bug 1459838 using fix made by Thomas Albrecht.  (Thanks!)
-// Also added a constructor for NoCheck policy.
-//
-// Revision 1.28  2006/03/27 18:38:30  rich_sposato
-// Added check for NULL pointer in HeapStorage policy.
-//
-// Revision 1.27  2006/03/27 18:34:36  rich_sposato
-// Added HeapStorage policy as mentioned in Feature Request 1441024.
-//
-// Revision 1.26  2006/03/17 22:52:55  rich_sposato
-// Fixed bugs 1452805 and 1451835.  Added Merge ability for RefLink policy.
-// Added more tests for SmartPtr.
-//
-// Revision 1.25  2006/03/17 20:22:14  syntheticpp
-// patch undefined uintptr_t, thx to Regis Desgroppes
-//
-// Revision 1.24  2006/03/08 17:07:11  syntheticpp
-// replace tabs with 4 spaces in all files
-//
-// Revision 1.23  2006/02/28 16:55:56  syntheticpp
-// undo disabling checking, remove warnings, many thanks to Sam Miller
-//
-// Revision 1.22  2006/02/28 12:59:59  syntheticpp
-// fix wrong RejectNull implementation, thanks to Sam Miller
-//
-// Revision 1.21  2006/02/27 19:59:20  syntheticpp
-// add support of loki.dll
-//
-// Revision 1.20  2006/02/25 13:48:54  syntheticpp
-// add constness policy to doc
-//
-// Revision 1.19  2006/02/25 13:01:40  syntheticpp
-// add const member function OnDereference to non static RejectNull policies
-//
-// Revision 1.18  2006/02/25 01:52:17  rich_sposato
-// Moved a monolithic base class from header file to new source file.
-//
-// Revision 1.17  2006/02/19 22:04:28  rich_sposato
-// Moved Const-policy structs from SmartPtr.h to ConstPolicy.h.
-//
-// Revision 1.16  2006/02/14 11:54:46  syntheticpp
-// rename SmartPtr-ByRef and ScopeGuard-ByRefHolder into RefToValue and move it to loki/RefToValue.h
-//
-// Revision 1.15  2006/02/08 18:12:29  rich_sposato
-// Fixed bug 1425890.  Last SmartPtr in linked chain NULLs its prev & next
-// pointers to prevent infinite recursion.  Added asserts.
-//
-// Revision 1.14  2006/01/30 20:07:38  syntheticpp
-// replace tabss
-//
-// Revision 1.13  2006/01/30 20:01:37  syntheticpp
-// add ArrayStorage and propagating constness policies
-//
-// Revision 1.12  2006/01/27 08:58:17  syntheticpp
-// replace unsigned int with the platform independent uintptr_t to make it more 64bit portable, and work around for mac gcc 4.0.0 bug in assert
-//
-// Revision 1.11  2006/01/22 13:31:12  syntheticpp
-// add additional template parameter for the changed threading classes
-//
-// Revision 1.10  2006/01/18 17:21:31  lfittl
-// - Compile library with -Weffc++ and -pedantic (gcc)
-// - Fix most issues raised by using -Weffc++ (initialization lists)
-//
-// Revision 1.9  2006/01/16 19:05:09  rich_sposato
-// Added cvs keywords.
-//

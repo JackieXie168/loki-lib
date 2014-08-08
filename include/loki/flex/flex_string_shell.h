@@ -13,6 +13,9 @@
 #ifndef FLEX_STRING_SHELL_INC_
 #define FLEX_STRING_SHELL_INC_
 
+// $Id: flex_string_shell.h 754 2006-10-17 19:59:11Z syntheticpp $
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // class template flex_string
 // This file does not include any storage policy headers

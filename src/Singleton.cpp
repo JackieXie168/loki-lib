@@ -13,7 +13,8 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/src/Singleton.cpp,v 1.7 2006/01/16 20:59:53 rich_sposato Exp $
+// $Id: Singleton.cpp 756 2006-10-17 20:05:42Z syntheticpp $
+
 
 #include <loki/Singleton.h>
 
@@ -69,17 +70,5 @@ void LOKI_C_CALLING_CONVENTION_QUALIFIER Loki::Private::AtExitFn()
     delete pTop;
 }
 
-#endif
+#endif 
 
-////////////////////////////////////////////////////////////////////////////////
-// Change log:
-// June 20, 2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
-// January 10, 2002: Fixed bug in call to realloc - credit due to Nigel Gent and
-//      Eike Petersen
-// May 08, 2002: Refixed bug in call to realloc
-////////////////////////////////////////////////////////////////////////////////
-
-// $Log: Singleton.cpp,v $
-// Revision 1.7  2006/01/16 20:59:53  rich_sposato
-// Added cvs keywords.
-//

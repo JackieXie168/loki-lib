@@ -8,6 +8,9 @@
 // for any purpose. It is provided "as is" without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
+// $Id: Phoenix.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+
+
 // A singleton LogClass object that resurrects itself after
 // it has been automatically destroyed during program
 // termination.  When a dead-reference to the LogClass

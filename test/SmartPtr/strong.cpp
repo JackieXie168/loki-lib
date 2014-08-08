@@ -10,7 +10,8 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/SmartPtr/strong.cpp,v 1.6 2006/05/17 16:23:39 syntheticpp Exp $
+// $Id: strong.cpp 805 2007-01-13 01:47:23Z rich_sposato $
+
 
 // ----------------------------------------------------------------------------
 
@@ -934,21 +935,130 @@ void DoStrongForwardReferenceTest( void )
 
 // ----------------------------------------------------------------------------
 
-// $Log: strong.cpp,v $
-// Revision 1.6  2006/05/17 16:23:39  syntheticpp
-// remove gcc warnings
-//
-// Revision 1.5  2006/04/19 01:04:25  rich_sposato
-// Changed DeleteSingle and DeleteArray policy to not allow use of incomplete
-// types.
-//
-// Revision 1.4  2006/04/18 07:29:41  lfittl
-// - Various makefile improvements (better mingw support, easier to add new sources)
-// - Include loki/StrongPtr.hpp, not Loki/StrongPtr.hpp (test/SmartPtr)
-//
-// Revision 1.3  2006/04/07 16:27:11  vizowl
-// adding an XCode build project
-//
-// Revision 1.2  2006/04/06 18:19:58  rich_sposato
-// Added CVS Log keyword.
-//
+#include <algorithm>
+
+struct Foo
+{
+};
+typedef Loki::StrongPtr
+< 
+    BaseClass, false, TwoRefCounts, DisallowConversion,
+    AssertCheck, CantResetWithStrong, DeleteSingle, DontPropagateConst 
+>
+Ptr;
+
+bool Compare( const Ptr&, const Ptr&)
+{
+    return true; 
+}
+
+void friend_handling2()
+{
+    // http://sourceforge.net/tracker/index.php?func=detail&aid=1570582&group_id=29557&atid=396644
+
+    // friend injection
+    // see http://gcc.gnu.org/bugzilla/show_bug.cgi?id=28597
+    std::vector<Ptr> vec;
+    std::sort( vec.begin(), vec.end(), Compare );
+    std::nth_element( vec.begin(), vec.begin(), vec.end(), Compare );
+    std::search( vec.begin(), vec.end(),
+        vec.begin(), vec.end(), Compare );
+    Ptr a, b;
+    Compare( a, b );
+
+    // http://gcc.gnu.org/bugzilla/show_bug.cgi?id=29486
+    BaseClass * pNull ;
+    Ptr w1( new BaseClass );
+    ReleaseAll( w1, pNull );
+}
+
+// ----------------------------------------------------------------------------
+
+void DoStrongCompareTests( void )
+{
+    Earth * p1 = new Earth;
+    Earth * p2 = new Earth;
+    Earth_StrongPtr sp1( p1 );
+    Earth_StrongPtr sp2( p2 );
+    const bool isOneLess = ( p1 < p2 );
+    if ( isOneLess )
+    {
+        assert( sp1 <   p2 );
+        assert( sp1 <  sp2 );
+        assert( sp1 <=  p2 );
+        assert( sp1 <= sp2 );
+        assert( sp1 <=  p1 );
+        assert( sp1 ==  p1 );
+        assert( sp1 == sp1 );
+        assert( sp1 !=  p2 );
+        assert( sp1 != sp2 );
+        assert( sp2 >   p1 );
+        assert( sp2 >  sp1 );
+        assert( sp2 >=  p1 );
+        assert( sp2 >= sp1 );
+        assert( sp2 >=  p2 );
+        assert( sp2 ==  p2 );
+        assert( sp2 == sp2 );
+        assert( sp2 !=  p1 );
+        assert( sp2 != sp1 );
+        assert(  p1 <   p2 );
+        assert(  p1 <  sp2 );
+        assert(  p1 <=  p2 );
+        assert(  p1 <= sp2 );
+        assert(  p1 <= sp1 );
+        assert(  p1 ==  p1 );
+        assert(  p1 == sp1 );
+        assert(  p1 !=  p2 );
+        assert(  p1 != sp2 );
+        assert(  p2 >   p1 );
+        assert(  p2 >  sp1 );
+        assert(  p2 >=  p1 );
+        assert(  p2 >= sp1 );
+        assert(  p2 >= sp2 );
+        assert(  p2 ==  p2 );
+        assert(  p2 == sp2 );
+        assert(  p2 !=  p1 );
+        assert(  p2 != sp1 );
+    }
+    else
+    {
+        assert( sp2 <   p1 );
+        assert( sp2 <  sp1 );
+        assert( sp2 <=  p1 );
+        assert( sp2 <=  p2 );
+        assert( sp2 <= sp1 );
+        assert( sp2 ==  p2 );
+        assert( sp2 == sp2 );
+        assert( sp2 !=  p1 );
+        assert( sp2 != sp1 );
+        assert( sp1 >   p2 );
+        assert( sp1 >  sp2 );
+        assert( sp1 >=  p2 );
+        assert( sp1 >=  p1 );
+        assert( sp1 >= sp2 );
+        assert( sp1 ==  p1 );
+        assert( sp1 == sp1 );
+        assert( sp1 !=  p2 );
+        assert( sp1 != sp2 );
+        assert(  p2 <   p1 );
+        assert(  p2 <  sp1 );
+        assert(  p2 <=  p1 );
+        assert(  p2 <= sp1 );
+        assert(  p2 <= sp2 );
+        assert(  p2 ==  p2 );
+        assert(  p2 == sp2 );
+        assert(  p2 !=  p1 );
+        assert(  p2 != sp1 );
+        assert(  p1 >   p2 );
+        assert(  p1 >  sp2 );
+        assert(  p1 >=  p2 );
+        assert(  p1 >= sp2 );
+        assert(  p1 >= sp1 );
+        assert(  p1 ==  p1 );
+        assert(  p1 == sp1 );
+        assert(  p1 !=  p2 );
+        assert(  p1 != sp2 );
+    }
+}
+
+// ----------------------------------------------------------------------------

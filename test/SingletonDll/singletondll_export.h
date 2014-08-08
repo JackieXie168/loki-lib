@@ -12,6 +12,9 @@
 #ifndef SINGLETONDLL_SINGLETONDLL_EXPORT_H
 #define SINGLETONDLL_SINGLETONDLL_EXPORT_H
 
+// $Id: singletondll_export.h 760 2006-10-17 20:36:13Z syntheticpp $
+
+
 #include <loki/LokiExport.h>
 
 #if (defined(SINGLETONDLL_MAKE_DLL) && defined(SINGLETONDLL_DLL)) || \

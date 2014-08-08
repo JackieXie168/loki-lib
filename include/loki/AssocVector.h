@@ -12,11 +12,11 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
-
 #ifndef LOKI_ASSOCVECTOR_INC_
 #define LOKI_ASSOCVECTOR_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/AssocVector.h,v 1.5 2006/01/16 19:05:09 rich_sposato Exp $
+// $Id: AssocVector.h 765 2006-10-18 13:55:32Z syntheticpp $
+
 
 #include <algorithm>
 #include <functional>
@@ -73,6 +73,7 @@ namespace Loki
 // * value_type is std::pair<K, V> not std::pair<const K, V>
 // * iterators are random
 ////////////////////////////////////////////////////////////////////////////////
+
 
     template
     <
@@ -288,32 +289,63 @@ namespace Loki
             const MyCompare& me = *this;
             return std::equal_range(begin(), end(), k, me);
         }
-        
-        friend bool operator==(const AssocVector& lhs, const AssocVector& rhs)
-        {
-            const Base& me = lhs;
-            return me == rhs;
-        } 
+
+        template <class K1, class V1, class C1, class A1>
+        friend bool operator==(const AssocVector<K1, V1, C1, A1>& lhs,
+                        const AssocVector<K1, V1, C1, A1>& rhs);
 
         bool operator<(const AssocVector& rhs) const
         {
             const Base& me = *this;
             const Base& yo = rhs;
             return me < yo;
-        } 
+        }
 
-        friend bool operator!=(const AssocVector& lhs, const AssocVector& rhs)
-        { return !(lhs == rhs); } 
+        template <class K1, class V1, class C1, class A1>
+        friend bool operator!=(const AssocVector<K1, V1, C1, A1>& lhs,
+                               const AssocVector<K1, V1, C1, A1>& rhs);
 
-        friend bool operator>(const AssocVector& lhs, const AssocVector& rhs)
-        { return rhs < lhs; }
+        template <class K1, class V1, class C1, class A1>
+        friend bool operator>(const AssocVector<K1, V1, C1, A1>& lhs,
+                              const AssocVector<K1, V1, C1, A1>& rhs);
 
-        friend bool operator>=(const AssocVector& lhs, const AssocVector& rhs)
-        { return !(lhs < rhs); } 
+        template <class K1, class V1, class C1, class A1>
+        friend bool operator>=(const AssocVector<K1, V1, C1, A1>& lhs,
+                               const AssocVector<K1, V1, C1, A1>& rhs);
 
-        friend bool operator<=(const AssocVector& lhs, const AssocVector& rhs)
-        { return !(rhs < lhs); }
+        template <class K1, class V1, class C1, class A1>
+        friend bool operator<=(const AssocVector<K1, V1, C1, A1>& lhs,
+                               const AssocVector<K1, V1, C1, A1>& rhs);
     };
+
+    template <class K, class V, class C, class A>
+    inline bool operator==(const AssocVector<K, V, C, A>& lhs,
+                           const AssocVector<K, V, C, A>& rhs)
+    {
+      const std::vector<std::pair<K, V>, A>& me = lhs;
+      return me == rhs;
+    }
+
+    template <class K, class V, class C, class A>
+    inline bool operator!=(const AssocVector<K, V, C, A>& lhs,
+                           const AssocVector<K, V, C, A>& rhs)
+    { return !(lhs == rhs); }
+
+    template <class K, class V, class C, class A>
+    inline bool operator>(const AssocVector<K, V, C, A>& lhs,
+                          const AssocVector<K, V, C, A>& rhs)
+    { return rhs < lhs; }
+
+    template <class K, class V, class C, class A>
+    inline bool operator>=(const AssocVector<K, V, C, A>& lhs,
+                           const AssocVector<K, V, C, A>& rhs)
+    { return !(lhs < rhs); }
+
+    template <class K, class V, class C, class A>
+    inline bool operator<=(const AssocVector<K, V, C, A>& lhs,
+                           const AssocVector<K, V, C, A>& rhs)
+    { return !(rhs < lhs); }
+
 
     // specialized algorithms:
     template <class K, class V, class C, class A>
@@ -322,20 +354,5 @@ namespace Loki
     
 } // namespace Loki
 
-////////////////////////////////////////////////////////////////////////////////
-// Change log:
-// May 20,     2001: change operator= - credit due to Cristoph Koegl
-// June 11,    2001: remove paren in equal_range - credit due to Cristoph Koegl
-// June 20,    2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
-// January 22, 2002: fixed operator= - credit due to Tom Hyer
-// June 25,    2002: fixed template insert() - credit due to Robert Minsk
-// June 27,    2002: fixed member swap() - credit due to David Brookman
-// February 2, 2003: fixed dependent names - credit due to Rani Sharoni
-////////////////////////////////////////////////////////////////////////////////
+#endif // end file guardian
 
-#endif // ASSOCVECTOR_INC_
-
-// $Log: AssocVector.h,v $
-// Revision 1.5  2006/01/16 19:05:09  rich_sposato
-// Added cvs keywords.
-//

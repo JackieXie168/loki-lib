@@ -9,6 +9,11 @@
 //     for any purpose. It is provided "as is" without express or implied 
 //     warranty.
 ////////////////////////////////////////////////////////////////////////////////
+#ifndef LOKI_SAFEFORMAT_INC_
+#define LOKI_SAFEFORMAT_INC_
+
+// $Id: SafeFormat.h 747 2006-10-17 19:48:40Z syntheticpp $
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // This file contains definitions for SafePrintf. SafeScanf coming soon (the 
@@ -16,33 +21,34 @@
 // See Alexandrescu, Andrei: Type-safe Formatting, C/C++ Users Journal, Aug 2005
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef LOKI_SAFEFORMAT_H_
-#define LOKI_SAFEFORMAT_H_
-
-// $Header: /cvsroot/loki-lib/loki/include/loki/SafeFormat.h,v 1.25 2006/06/19 12:39:08 syntheticpp Exp $
-
 #include <cstdio>
 #include <string>
 #include <stdexcept>
 #include <utility>
 #include <cassert>
 #include <locale>
+#include <iostream>
 
 #include <loki/LokiExport.h>
 
 
 // long is 32 bit on 64-bit Windows!
+// intptr_t used to get 64 bit on Win64
 #if defined(_WIN32) || defined(_WIN64)
-
-#define LOKI_SAFEFORMAT_SIGNED_LONG intptr_t
-#define LOKI_SAFEFORMAT_UNSIGNED_LONG uintptr_t
-
+#  define LOKI_SAFEFORMAT_SIGNED_LONG intptr_t
+#  define LOKI_SAFEFORMAT_UNSIGNED_LONG uintptr_t
 #else
-
-#define LOKI_SAFEFORMAT_SIGNED_LONG signed long
-#define LOKI_SAFEFORMAT_UNSIGNED_LONG unsigned long
-
+#  define LOKI_SAFEFORMAT_SIGNED_LONG signed long
+#  define LOKI_SAFEFORMAT_UNSIGNED_LONG unsigned long
 #endif
+
+// Windows headers could have min/max defined
+#ifdef max 
+#  undef max 
+#endif 
+#ifdef min 
+#  undef min 
+#endif 
 
 namespace Loki
 {
@@ -52,6 +58,9 @@ namespace Loki
     LOKI_EXPORT
     void write(std::FILE* f, const char* from, const char* to);
 
+    // Write to an ostream
+    LOKI_EXPORT
+    void write(std::ostream& f, const char* from, const char* to);
 
     // Write to a string
     LOKI_EXPORT
@@ -61,8 +70,11 @@ namespace Loki
     template <class Char>
     void write(std::pair<Char*, std::size_t>& s, const Char* from, const Char* to) {
         assert(from <= to);
-        if (from + s.second > to) throw std::overflow_error("");
-        s.first = copy(from, to, s.first);
+        if(from + s.second < to)
+            throw std::overflow_error("");
+        // s.first: position one past the final copied element 
+        s.first = std::copy(from, to, s.first);
+        // remaining buffer size
         s.second -= to - from;
     }
 
@@ -99,10 +111,13 @@ namespace Loki
         LOKI_PRINTF_STATE_FORWARD(signed short)
         LOKI_PRINTF_STATE_FORWARD(unsigned short)
         LOKI_PRINTF_STATE_FORWARD(signed int)
-#if !(defined(_WIN32) || defined(_WIN64))
+        LOKI_PRINTF_STATE_FORWARD(signed long)
+#if (defined(_WIN32) || defined(_WIN64))
+        LOKI_PRINTF_STATE_FORWARD(unsigned long)
+#else
+        // on Windows already defined by uintptr_t
         LOKI_PRINTF_STATE_FORWARD(unsigned int)
 #endif
-        LOKI_PRINTF_STATE_FORWARD(signed long)
 
         // Print (or gobble in case of the "*" specifier) an int
         PrintfState& operator()(LOKI_SAFEFORMAT_UNSIGNED_LONG i) {
@@ -536,13 +551,19 @@ namespace Loki
     PrintfState<std::FILE*, char> Printf(const char* format);
 
     LOKI_EXPORT
-    PrintfState<std::FILE*, char> Printf(const std::string format);
+    PrintfState<std::FILE*, char> Printf(const std::string& format);
 
     LOKI_EXPORT
-    PrintfState<std::FILE*, char> FPrintf(FILE* f, const char* format);
+    PrintfState<std::FILE*, char> FPrintf(std::FILE* f, const char* format);
 
     LOKI_EXPORT
-    PrintfState<std::FILE*, char> FPrintf(FILE* f, const std::string& format);
+    PrintfState<std::FILE*, char> FPrintf(std::FILE* f, const std::string& format);
+
+    LOKI_EXPORT
+    PrintfState<std::ostream&, char> FPrintf(std::ostream& f, const char* format);
+
+    LOKI_EXPORT
+    PrintfState<std::ostream&, char> FPrintf(std::ostream& f, const std::string& format);
 
     LOKI_EXPORT
     PrintfState<std::string&, char> SPrintf(std::string& s, const char* format);
@@ -570,19 +591,5 @@ namespace Loki
 }// namespace Loki
 
 
-#endif //SAFEFORMAT_H_
+#endif // end file guardian
 
-// $Log: SafeFormat.h,v $
-// Revision 1.25  2006/06/19 12:39:08  syntheticpp
-// replace tabs with 4 spaces
-//
-// Revision 1.24  2006/02/28 11:13:20  syntheticpp
-// add export specifier
-//
-// Revision 1.23  2006/01/18 17:21:31  lfittl
-// - Compile library with -Weffc++ and -pedantic (gcc)
-// - Fix most issues raised by using -Weffc++ (initialization lists)
-//
-// Revision 1.22  2006/01/16 19:05:09  rich_sposato
-// Added cvs keywords.
-//

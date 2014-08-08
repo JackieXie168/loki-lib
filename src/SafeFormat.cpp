@@ -10,7 +10,8 @@
 //     warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/src/SafeFormat.cpp,v 1.2 2006/01/16 20:59:53 rich_sposato Exp $
+// $Id: SafeFormat.cpp 756 2006-10-17 20:05:42Z syntheticpp $
+
 
 #include <loki/SafeFormat.h>
 
@@ -23,7 +24,7 @@ namespace Loki
 
     void write(std::FILE* f, const char* from, const char* to) {
         assert(from <= to);
-        fwrite(from, 1, to - from, f);
+        ::std::fwrite(from, 1, to - from, f);
     }
 
     // Write to a string
@@ -32,8 +33,13 @@ namespace Loki
         assert(from <= to);
         s.append(from, to);
     }
-
   
+    // Write to a stream
+
+    void write(std::ostream& f, const char* from, const char* to) {
+        assert(from <= to);
+        f.write(from, std::streamsize(to - from));
+    }
 
     ////////////////////////////////////////////////////////////////////////////////
     // PrintfState class template
@@ -46,16 +52,24 @@ namespace Loki
         return PrintfState<std::FILE*, char>(stdout, format);
     }
 
-    PrintfState<std::FILE*, char> Printf(const std::string format) {
+    PrintfState<std::FILE*, char> Printf(const std::string& format) {
         return PrintfState<std::FILE*, char>(stdout, format.c_str());
     }
 
-    PrintfState<std::FILE*, char> FPrintf(FILE* f, const char* format) {
+    PrintfState<std::FILE*, char> FPrintf(std::FILE* f, const char* format) {
         return PrintfState<std::FILE*, char>(f, format);
     }
 
-    PrintfState<std::FILE*, char> FPrintf(FILE* f, const std::string& format) {
+    PrintfState<std::FILE*, char> FPrintf(std::FILE* f, const std::string& format) {
         return PrintfState<std::FILE*, char>(f, format.c_str());
+    }
+
+    PrintfState<std::ostream&, char> FPrintf(std::ostream& f, const char* format) {
+        return PrintfState<std::ostream&, char>(f, format);
+    }
+
+    PrintfState<std::ostream&, char> FPrintf(std::ostream& f, const std::string& format) {
+        return PrintfState<std::ostream&, char>(f, format.c_str());
     }
 
     PrintfState<std::string&, char> SPrintf(std::string& s, const char* format) {
@@ -67,9 +81,5 @@ namespace Loki
     }
 
 
-}// namespace Loki
+} // end namespace Loki
 
-// $Log: SafeFormat.cpp,v $
-// Revision 1.2  2006/01/16 20:59:53  rich_sposato
-// Added cvs keywords.
-//

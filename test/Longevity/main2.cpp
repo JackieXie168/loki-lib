@@ -7,6 +7,9 @@
 // for any purpose. It is provided "as is" without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
+// $Id: main2.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+
+
 #include <iostream>
 
 #include <loki/Singleton.h>

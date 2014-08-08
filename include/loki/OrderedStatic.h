@@ -9,11 +9,10 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
+#ifndef LOKI_ORDEREDSTATIC_INC_
+#define LOKI_ORDEREDSTATIC_INC_
 
-#ifndef LOKI_ORDEREDSTATIC_H_
-#define LOKI_ORDEREDSTATIC_H_
-
-// $Header: /cvsroot/loki-lib/loki/include/loki/OrderedStatic.h,v 1.10 2006/02/27 19:59:20 syntheticpp Exp $
+// $Id: OrderedStatic.h 751 2006-10-17 19:50:37Z syntheticpp $
 
 
 #include <vector>
@@ -222,12 +221,5 @@ namespace Loki
 }// namespace Loki
 
 
-#endif
+#endif // end file guardian
 
-// $Log: OrderedStatic.h,v $
-// Revision 1.10  2006/02/27 19:59:20  syntheticpp
-// add support of loki.dll
-//
-// Revision 1.9  2006/01/16 19:05:09  rich_sposato
-// Added cvs keywords.
-//

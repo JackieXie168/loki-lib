@@ -1,5 +1,8 @@
-#ifndef RANDOM_H_
-#define RANDOM_H_
+#ifndef YASLI_RANDOM_H_
+#define YASLI_RANDOM_H_
+
+// $Id: random.h 754 2006-10-17 19:59:11Z syntheticpp $
+
 
 #include <ctime>
 

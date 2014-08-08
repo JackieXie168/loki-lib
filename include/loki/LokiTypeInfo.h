@@ -12,13 +12,11 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
-
-// Last update: June 20, 2001
-
 #ifndef LOKI_LOKITYPEINFO_INC_
 #define LOKI_LOKITYPEINFO_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/LokiTypeInfo.h,v 1.3 2006/01/16 19:05:09 rich_sposato Exp $
+// $Id: LokiTypeInfo.h 748 2006-10-17 19:49:08Z syntheticpp $
+
 
 #include <typeinfo>
 #include <cassert>
@@ -102,14 +100,4 @@ namespace Loki
     { return !(lhs < rhs); }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Change log:
-// June 20, 2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
-////////////////////////////////////////////////////////////////////////////////
-
-#endif // LOKITYPEINFO_INC_
-
-// $Log: LokiTypeInfo.h,v $
-// Revision 1.3  2006/01/16 19:05:09  rich_sposato
-// Added cvs keywords.
-//
+#endif // end file guardian

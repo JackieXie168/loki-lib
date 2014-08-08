@@ -12,7 +12,8 @@
 #ifndef LOKI_REGISTER_INC_
 #define LOKI_REGISTER_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/Register.h,v 1.4 2006/06/19 12:39:08 syntheticpp Exp $ 
+// $Id: Register.h 776 2006-11-09 13:12:57Z syntheticpp $
+
 
 #include "TypeManip.h"
 #include "HierarchyGenerators.h"
@@ -107,16 +108,27 @@ namespace Loki
     ///  see test/Register
     ////////////////////////////////////////////////////////////////////////////////
 
+    
+#define LOKI_CONCATE(a,b,c,d) a ## b ## c ## d 
+#define LOKI_CONCAT(a,b,c,d) LOKI_CONCATE(a,b,c,d)
+
 #define LOKI_CHECK_CLASS_IN_LIST( CLASS , LIST )                                \
                                                                                 \
-    struct Loki_##CLASS##LIST_OK{typedef int class_##CLASS##_is_not_in_##LIST;};\
-    typedef Loki::Select<Loki::TL::IndexOf<LIST, CLASS>::value == -1,            \
-    CLASS,Loki_##CLASS##LIST_OK >::Result IsInList##CLASS##LIST;                \
-    typedef IsInList##CLASS##LIST::class_##CLASS##_is_not_in_##LIST                \
-                                                    isInListTest##CLASS##LIST;
+    struct LOKI_CONCAT(check_,CLASS,_isInList_,LIST)                            \
+    {                                                                           \
+        typedef int LOKI_CONCAT(ERROR_class_,CLASS,_isNotInList_,LIST);         \
+    };                                                                          \
+    typedef Loki::Select<Loki::TL::IndexOf<LIST, CLASS>::value == -1,           \
+                        CLASS,                                                  \
+                        LOKI_CONCAT(check_,CLASS,_isInList_,LIST)>              \
+                        ::Result LOKI_CONCAT(CLASS,isInList,LIST,result);       \
+    typedef LOKI_CONCAT(CLASS,isInList,LIST,result)::                           \
+                        LOKI_CONCAT(ERROR_class_,CLASS,_isNotInList_,LIST)      \
+                        LOKI_CONCAT(ERROR_class_,CLASS,_isNotInList__,LIST);
+
 
 } // namespace Loki
 
 
-#endif
+#endif // end file guardian
 

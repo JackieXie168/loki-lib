@@ -13,6 +13,9 @@
 #ifndef SMALL_STRING_OPT_INC_
 #define SMALL_STRING_OPT_INC_
 
+// $Id: smallstringopt.h 754 2006-10-17 19:59:11Z syntheticpp $
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // class template SmallStringOpt
 // Builds the small string optimization over any other storage

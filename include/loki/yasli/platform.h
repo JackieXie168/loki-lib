@@ -1,6 +1,9 @@
 #ifndef YASLI_PLATFORM_H_
 #define YASLI_PLATFORM_H_
 
+// $Id: platform.h 754 2006-10-17 19:59:11Z syntheticpp $
+
+
 // Most conservative
 
 #define YASLI_HAS_EFFICIENT_MSIZE 0

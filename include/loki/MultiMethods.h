@@ -12,11 +12,11 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
-
 #ifndef LOKI_MULTIMETHODS_INC_
 #define LOKI_MULTIMETHODS_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/MultiMethods.h,v 1.4 2006/01/16 19:05:09 rich_sposato Exp $
+// $Id: MultiMethods.h 751 2006-10-17 19:50:37Z syntheticpp $
+
 
 #include "Typelist.h"
 #include "LokiTypeInfo.h"
@@ -409,15 +409,7 @@ namespace Loki
     };
 } // namespace Loki
 
-////////////////////////////////////////////////////////////////////////////////
-// Change log:
-// June 20,    2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
-// February 2, 2003: fixed dependent names - credit due to Rani Sharoni
-////////////////////////////////////////////////////////////////////////////////
 
-#endif
 
-// $Log: MultiMethods.h,v $
-// Revision 1.4  2006/01/16 19:05:09  rich_sposato
-// Added cvs keywords.
-//
+#endif // end file guardian
+

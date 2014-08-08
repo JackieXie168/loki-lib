@@ -9,11 +9,10 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
-
-// $Header: /cvsroot/loki-lib/loki/test/LockingPtr/Thread.h,v 1.5 2006/06/08 19:15:27 lfittl Exp $
-
 #ifndef LOKI_THREAD_H_
 #define LOKI_THREAD_H_
+
+// $Id: Thread.h 761 2006-10-17 20:48:18Z syntheticpp $
 
 #include <loki/Threads.h>
 #include <vector>
@@ -103,17 +102,3 @@ namespace Loki
 
 #endif
 
-// $Log: Thread.h,v $
-// Revision 1.5  2006/06/08 19:15:27  lfittl
-// - Simplify some threading code by not saving the return status
-//   (also fixes 2 gcc warnings)
-//
-// Revision 1.4  2006/01/21 14:11:59  syntheticpp
-// remove gcc warnings
-//
-// Revision 1.3  2006/01/21 01:02:58  rich_sposato
-// Moved Mutex class into Loki library.
-//
-// Revision 1.2  2006/01/19 19:36:09  rich_sposato
-// Added functions to Mutex class.
-//

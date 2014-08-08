@@ -14,7 +14,8 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/src/SmartPtr.cpp,v 1.4 2006/03/17 22:52:56 rich_sposato Exp $
+// $Id: SmartPtr.cpp 756 2006-10-17 20:05:42Z syntheticpp $
+
 
 #include <loki/SmartPtr.h>
 
@@ -311,19 +312,3 @@ bool RefLinkedBase::Merge( RefLinkedBase & rhs )
 
 } // end namespace Loki
 
-// ----------------------------------------------------------------------------
-
-// $Log: SmartPtr.cpp,v $
-// Revision 1.4  2006/03/17 22:52:56  rich_sposato
-// Fixed bugs 1452805 and 1451835.  Added Merge ability for RefLink policy.
-// Added more tests for SmartPtr.
-//
-// Revision 1.3  2006/03/01 02:08:10  rich_sposato
-// Fixed bug 1440694 by adding check if rhs is previous neighbor.
-//
-// Revision 1.2  2006/02/25 13:07:15  syntheticpp
-// gcc does not like ; when closing a namespace
-//
-// Revision 1.1  2006/02/25 01:52:17  rich_sposato
-// Moved a monolithic base class from header file to new source file.
-//

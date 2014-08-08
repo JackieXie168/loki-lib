@@ -10,11 +10,10 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
-
 #ifndef LOKI_CONST_POLICY_INC_
 #define LOKI_CONST_POLICY_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/ConstPolicy.h,v 1.1 2006/02/19 22:04:28 rich_sposato Exp $
+// $Id: ConstPolicy.h 769 2006-10-26 10:58:19Z syntheticpp $
 
 
 namespace Loki
@@ -54,14 +53,9 @@ namespace Loki
 
 // default will not break existing code
 #ifndef LOKI_DEFAULT_CONSTNESS
-#define LOKI_DEFAULT_CONSTNESS DontPropagateConst
+#define LOKI_DEFAULT_CONSTNESS ::Loki::DontPropagateConst
 #endif
 
 } // end namespace Loki
 
 #endif // end file guardian
-
-// $Log: ConstPolicy.h,v $
-// Revision 1.1  2006/02/19 22:04:28  rich_sposato
-// Moved Const-policy structs from SmartPtr.h to ConstPolicy.h.
-//

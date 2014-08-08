@@ -9,12 +9,11 @@
 //     http://www.cuj.com/documents/s=7998/cujcexp1902alexandr/
 // Prepared for Loki library by Richard Sposato
 ////////////////////////////////////////////////////////////////////////////////
-
-// $Header: /cvsroot/loki-lib/loki/include/loki/LockingPtr.h,v 1.11 2006/03/08 18:22:42 syntheticpp Exp $
-
-
 #ifndef LOKI_LOCKING_PTR_INC_
 #define LOKI_LOCKING_PTR_INC_
+
+// $Id: LockingPtr.h 748 2006-10-17 19:49:08Z syntheticpp $
+
 
 #include <loki/ConstPolicy.h>
 
@@ -45,6 +44,18 @@ namespace Loki
             pMutex_( &mutex )
         {
             mutex.Lock();
+        }
+
+        typedef typename std::pair<volatile ConstOrNotType *, LockingPolicy *> Pair;
+
+        /** Constructor locks mutex associated with an object.
+         @param lockpair a std::pair of pointers to the object and the mutex
+         */
+        LockingPtr( Pair lockpair )
+           : pObject_( const_cast< SharedObject * >( lockpair.first ) ),
+            pMutex_( lockpair.second )
+        {
+            lockpair.second->Lock();
         }
 
         /// Destructor unlocks the mutex.
@@ -86,41 +97,5 @@ namespace Loki
 
 } // namespace Loki
 
-#endif  // end file guardian
+#endif // end file guardian
 
-
-
-// $Log: LockingPtr.h,v $
-// Revision 1.11  2006/03/08 18:22:42  syntheticpp
-// doxygen fixes
-//
-// Revision 1.10  2006/02/20 21:45:40  rich_sposato
-// Removed struct Locking - no longer needed.
-//
-// Revision 1.9  2006/02/19 22:04:28  rich_sposato
-// Moved Const-policy structs from SmartPtr.h to ConstPolicy.h.
-//
-// Revision 1.8  2006/01/30 20:33:01  syntheticpp
-// use policies from SmartPtr.h, clean up
-//
-// Revision 1.7  2006/01/22 13:37:33  syntheticpp
-// use macro LOKI_DEFAULT_MUTEX for Mutex default value, defined in Threads.h
-//
-// Revision 1.6  2006/01/21 14:09:09  syntheticpp
-// replace LockPtr/ConstLockPtr implementation with a template policy based one
-//
-// Revision 1.5  2006/01/21 01:02:12  rich_sposato
-// Added Mutex class to Loki.  Made it the default policy class for locking.
-//
-// Revision 1.4  2006/01/19 19:34:19  rich_sposato
-// Added ConstLockingPtr class.
-//
-// Revision 1.3  2006/01/16 18:34:37  rich_sposato
-// Changed return type from LockingPtr to SharedObject.
-//
-// Revision 1.2  2006/01/14 00:20:10  syntheticpp
-// remove c&p error
-//
-// Revision 1.1  2005/11/19 22:00:23  rich_sposato
-// Adding LockingPtr class to Loki project.
-//

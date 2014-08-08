@@ -1,6 +1,8 @@
 // Loki TypeTraits test program
-// Kalle Rutanen
-// 25.9.2005
+// Kalle Rutanen 25.9.2005
+//
+// $Id: TypeTraitsTest2.h 760 2006-10-17 20:36:13Z syntheticpp $
+//
 //
 // Some type sets
 // --------------

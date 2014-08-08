@@ -3,7 +3,7 @@
 // Copyright (c) 2001 by Andrei Alexandrescu
 // Copyright (c) 2005 by Peter Kuemmel
 // This code DOES NOT accompany the book:
-// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design 
+// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design
 //     Patterns Applied". Copyright (c) 2001. Addison-Wesley.
 //
 // Code covered by the MIT License
@@ -13,7 +13,8 @@
 #ifndef LOKI_FACTORYPARM_INC_
 #define LOKI_FACTORYPARM_INC_
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/Factory.h,v 1.17 2006/05/20 10:23:07 syntheticpp Exp $ /cvsroot/loki-lib/loki/include/loki/Factory.h,v 1.15 2006/01/19 23:11:55 lfittl Exp $
+// $Id: Factory.h 788 2006-11-24 22:30:54Z clitte_bbt $
+
 
 #include "LokiTypeInfo.h"
 #include "Functor.h"
@@ -27,17 +28,64 @@
 //unreachable code if OnUnknownType throws an exception
 #endif
 
-///  \defgroup FactoryGroup Factory
+/**
+ * \defgroup	FactoriesGroup Factories
+ * \defgroup	FactoryGroup Factory
+ * \ingroup		FactoriesGroup
+ * \brief		Implements a generic object factory.
+ * 
+ * <i>The Factory Method pattern is an object-oriented design pattern.
+ * Like other creational patterns, it deals with the problem of creating objects
+ * (products) without specifying the exact class of object that will be created.
+ * Factory Method, one of the patterns from the Design Patterns book, handles
+ * this problem by defining a separate method for creating the objects, which
+ * subclasses can then override to specify the derived type of product that will
+ * be created.
+ * <br>
+ * More generally, the term Factory Method is often used to refer to any method
+ * whose main purpose is creation of objects.</i>
+ * <div ALIGN="RIGHT"><a href="http://en.wikipedia.org/wiki/Factory_method_pattern">
+ * Wikipedia</a></div>
+ * 
+ * Loki proposes a generic version of the Factory. Here is a typical use.<br>
+ * <code><br>
+ * 1. Factory< AbstractProduct, int > aFactory;<br>
+ * 2. aFactory.Register( 1, createProductNull );<br>
+ * 3. aFactory.CreateObject( 1 ); <br>
+ * </code><br>
+ * <br>
+ * - 1. The declaration<br>
+ * You want a Factory that produces AbstractProduct.<br>
+ * The client will refer to a creation method through an int.<br>
+ * - 2.The registration<br>
+ * The code that will contribute to the Factory will now need to declare its
+ * ProductCreator by registering them into the Factory.<br>
+ * A ProductCreator is a just a function that will return the right object. ie <br>
+ * <code>
+ * Product* createProductNull()<br>             
+ * {<br>
+ *     return new Product<br>
+ * }<br>
+ * </code><br>
+ * - 3. The use<br>
+ * Now the client can create object by calling the Factory's CreateObject method
+ * with the right identifier. If the ProductCreator were to have arguments
+ * (<i>ie :Product* createProductParm( int a, int b )</i>)
+ */
 
 namespace Loki
 {
 
-////////////////////////////////////////////////////////////////////////////////
-///  \class DefaultFactoryError
-///
-///  \ingroup FactoryGroup
-///  Manages the "Unknown Type" error in an object factory
-////////////////////////////////////////////////////////////////////////////////
+/**
+ * \defgroup	FactoryErrorPoliciesGroup Factory Error Policies
+ * \ingroup		FactoryGroup
+ * \brief		Manages the "Unknown Type" error in an object factory
+ * 
+ * \class DefaultFactoryError
+ * \ingroup		FactoryErrorPoliciesGroup
+ * \brief		Default policy that throws an exception		
+ * 
+ */
 
     template <typename IdentifierType, class AbstractProduct>
     struct DefaultFactoryError
@@ -46,14 +94,14 @@ namespace Loki
         {
             const char* what() const throw() { return "Unknown Type"; }
         };
-        
+
         static AbstractProduct* OnUnknownType(IdentifierType)
         {
             throw Exception();
         }
     };
-    
-    
+
+
 #define LOKI_ENABLE_NEW_FACTORY_CODE
 #ifdef LOKI_ENABLE_NEW_FACTORY_CODE
 
@@ -62,7 +110,7 @@ namespace Loki
 // class template FunctorImpl
 ////////////////////////////////////////////////////////////////////////////////
 
-    struct FactoryImplBase 
+    struct FactoryImplBase
     {
         typedef EmptyType Parm1;
         typedef EmptyType Parm2;
@@ -682,15 +730,15 @@ template <typename AP, typename Id, typename P1 >
 ///  \class Factory
 ///
 ///  \ingroup FactoryGroup
-///  Implements a generic object factory.     
-///  
+///  Implements a generic object factory.
+///
 ///  Create functions can have up to 15 parameters.
-///    
+///
 ///  \par Singleton lifetime when used with Loki::SingletonHolder
-///  Because Factory uses internally Functors which inherits from 
+///  Because Factory uses internally Functors which inherits from
 ///  SmallObject you must use the singleton lifetime
 ///  \code Loki::LongevityLifetime::DieAsSmallObjectChild \endcode
-///  Alternatively you could suppress for Functor the inheritance 
+///  Alternatively you could suppress for Functor the inheritance
 ///  from SmallObject by defining the macro:
 /// \code LOKI_FUNCTOR_IS_NOT_A_SMALLOBJECT \endcode
 ////////////////////////////////////////////////////////////////////////////////
@@ -751,7 +799,6 @@ template <typename AP, typename Id, typename P1 >
             ProductCreator creator( p, fn );
             return associations_.insert(
                 typename IdToProductMap::value_type(id, creator)).second != 0;
-
         }
 
         bool Unregister(const IdentifierType& id)
@@ -762,7 +809,7 @@ template <typename AP, typename Id, typename P1 >
         std::vector<IdentifierType> RegisteredIds()
         {
             std::vector<IdentifierType> ids;
-            for(typename IdToProductMap::iterator it = associations_.begin(); 
+            for(typename IdToProductMap::iterator it = associations_.begin();
                 it != associations_.end(); ++it)
             {
                 ids.push_back(it->first);
@@ -929,32 +976,31 @@ template <typename AP, typename Id, typename P1 >
 
     };
 
-
 #else
 
     template
     <
-        class AbstractProduct, 
+        class AbstractProduct,
         typename IdentifierType,
         typename ProductCreator = AbstractProduct* (*)(),
         template<typename, class>
             class FactoryErrorPolicy = DefaultFactoryError
     >
-    class Factory 
+    class Factory
         : public FactoryErrorPolicy<IdentifierType, AbstractProduct>
     {
     public:
         bool Register(const IdentifierType& id, ProductCreator creator)
         {
             return associations_.insert(
-                typename IdToProductMap::value_type(id, creator)).second;
+                typename IdToProductMap::value_type(id, creator)).second != 0;
         }
-        
+
         bool Unregister(const IdentifierType& id)
         {
-            return associations_.erase(id) == 1;
+            return associations_.erase(id) != 0;
         }
-        
+
         AbstractProduct* CreateObject(const IdentifierType& id)
         {
             typename IdToProductMap::iterator i = associations_.find(id);
@@ -964,26 +1010,28 @@ template <typename AP, typename Id, typename P1 >
             }
             return this->OnUnknownType(id);
         }
-        
+
     private:
         typedef AssocVector<IdentifierType, ProductCreator> IdToProductMap;
         IdToProductMap associations_;
     };
 
-
 #endif //#define ENABLE_NEW_FACTORY_CODE
 
-////////////////////////////////////////////////////////////////////////////////
-///  \class CloneFactory
-///
-///  \ingroup FactoryGroup
-///  Implements a generic cloning factory
-////////////////////////////////////////////////////////////////////////////////
+/**
+ *   \defgroup	CloneFactoryGroup Clone Factory
+ *   \ingroup	FactoriesGroup
+ *   \brief		Creates a copy from a polymorphic object.
+ *
+ *   \class		CloneFactory
+ *   \ingroup	CloneFactoryGroup
+ *   \brief		Creates a copy from a polymorphic object.
+ */
 
     template
     <
-        class AbstractProduct, 
-        class ProductCreator = 
+        class AbstractProduct,
+        class ProductCreator =
             AbstractProduct* (*)(const AbstractProduct*),
         template<typename, class>
             class FactoryErrorPolicy = DefaultFactoryError
@@ -995,92 +1043,42 @@ template <typename AP, typename Id, typename P1 >
         bool Register(const TypeInfo& ti, ProductCreator creator)
         {
             return associations_.insert(
-                typename IdToProductMap::value_type(ti, creator)).second;
+                typename IdToProductMap::value_type(ti, creator)).second != 0;
         }
-        
+
         bool Unregister(const TypeInfo& id)
         {
-            return associations_.erase(id) == 1;
+            return associations_.erase(id) != 0;
         }
-        
+
         AbstractProduct* CreateObject(const AbstractProduct* model)
         {
-            if (model == 0) return 0;
-            
+            if (model == NULL)
+            {
+            	return NULL;
+            }
+
             typename IdToProductMap::iterator i = 
-                associations_.find(typeid(*model));
+            	associations_.find(typeid(*model));
+            	
             if (i != associations_.end())
             {
                 return (i->second)(model);
             }
             return this->OnUnknownType(typeid(*model));
         }
-        
+
     private:
         typedef AssocVector<TypeInfo, ProductCreator> IdToProductMap;
         IdToProductMap associations_;
     };
+        
 } // namespace Loki
 
+
 #ifdef _MSC_VER
-#pragma warning( pop ) 
+#pragma warning( pop )
 #endif
 
-////////////////////////////////////////////////////////////////////////////////
-// Change log:
-// June 20,    2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
-// May 08,     2002: replaced const_iterator with iterator so that self-modifying
-//                   ProductCreators are supported. Also, added a throw()
-//                   spec to what(). Credit due to Jason Fischl.
-// February 2, 2003: fixed dependent names - credit due to Rani Sharoni
-// March 4,    2003: fixed dependent names - credit due to Ruslan Zasukhin and CW 8.3 
-// July 26,    2005: parameter support by Peter Kümmel 
-////////////////////////////////////////////////////////////////////////////////
-
-#endif // FACTORY_INC_
-
-// $Log: Factory.h,v $
-// Revision 1.17  2006/05/20 10:23:07  syntheticpp
-// add warnings in the documentation about the special lifetime when using SmallObjects
-//
-// Revision 1.16  2006/03/08 16:41:38  syntheticpp
-// remove second $
-//
-// Revision 1.15  2006/01/19 23:11:55  lfittl
-// - Disabled -Weffc++ flag, fixing these warnings produces too much useless code
-// - Enabled -pedantic, -Wold-style-cast and -Wundef for src/ and test/
-//
-// Revision 1.14  2006/01/16 19:05:09  rich_sposato
-// Added cvs keywords.
-//
-// Revision 1.13  2006/01/04 23:45:07  syntheticpp
-// remove gcc 4.0 warnings, Thanks to Lukas Fittl
-//
-// Revision 1.12  2005/11/12 17:11:55  syntheticpp
-// make typedefs private, replace tabs
-//
-// Revision 1.11  2005/11/12 16:52:36  syntheticpp
-// protect private data, add std::vector<IdType> RegisteredIds()
-//
-// Revision 1.10  2005/11/03 12:43:35  syntheticpp
-// more doxygen documentation, modules added
-//
-// Revision 1.9  2005/10/30 14:03:23  syntheticpp
-// replace tabs space
-//
-// Revision 1.8  2005/10/30 13:49:44  syntheticpp
-// make disabling the TYPELIST macros possible
-//
-// Revision 1.7  2005/10/05 09:57:37  syntheticpp
-// move unreachable code warnings
-//
-// Revision 1.6  2005/09/26 07:33:04  syntheticpp
-// move macros into LOKI_ namespace
-//
-// Revision 1.5  2005/07/31 14:23:24  syntheticpp
-// invert new factory code macro logic to be ReferenceTest more compatible with noncc code
-//
-// Revision 1.4  2005/07/28 14:26:09  syntheticpp
-// add cvs Header/Log
-//
+#endif // end file guardian
 

@@ -7,6 +7,7 @@
 
 // For more information, see http://www.boost.org
 
+// $Id: FunctionTest.cpp 760 2006-10-17 20:36:13Z syntheticpp $
 
 
 #include <functional>

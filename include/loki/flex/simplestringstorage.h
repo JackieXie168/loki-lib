@@ -13,6 +13,9 @@
 #ifndef SIMPLE_STRING_STORAGE_INC_
 #define SIMPLE_STRING_STORAGE_INC_
 
+// $Id: simplestringstorage.h 754 2006-10-17 19:59:11Z syntheticpp $
+
+
 /* This is the template for a storage policy
 ////////////////////////////////////////////////////////////////////////////////
 template <typename E, class A = @>

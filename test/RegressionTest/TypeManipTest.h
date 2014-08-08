@@ -9,11 +9,12 @@
 //
 // This software is provided "as is" without express or implied warranty.
 //
-// Last update: September 16, 2002
 ///////////////////////////////////////////////////////////////////////////////
-
 #ifndef TYPEMANIPTEST_H
 #define TYPEMANIPTEST_H
+
+// $Id: TypeManipTest.h 760 2006-10-17 20:36:13Z syntheticpp $
+
 
 #include <loki/TypeManip.h>
 #include "UnitTest.h"

@@ -10,6 +10,8 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
+// $Id: Dependencies.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+
 
 #include <iostream>
 

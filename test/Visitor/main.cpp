@@ -10,7 +10,8 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/Visitor/main.cpp,v 1.6 2006/06/19 12:46:22 syntheticpp Exp $
+// $Id: main.cpp 759 2006-10-17 20:27:29Z syntheticpp $
+
 
 #include <loki/Visitor.h>
 #include <iostream>
@@ -88,3 +89,5 @@ int main()
 #endif
 
 }
+
+

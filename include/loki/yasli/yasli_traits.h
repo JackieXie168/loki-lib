@@ -1,6 +1,10 @@
 #ifndef YASLI_TRAITS_H_
 #define YASLI_TRAITS_H_
 
+// $Id: yasli_traits.h 754 2006-10-17 19:59:11Z syntheticpp $
+
+
+
 
 namespace yasli_nstd 
 {

@@ -9,13 +9,11 @@
 // The author makes no representations about the suitability of this software
 //  for any purpose. It is provided "as is" without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
+#ifndef LOKI_DATAGENERATORS_INC_
+#define LOKI_DATAGENERATORS_INC_
 
-// Last update: Oct 10, 2002
+// $Id: DataGenerators.h 751 2006-10-17 19:50:37Z syntheticpp $
 
-#ifndef LOKI_DATAGENERATORS_H
-#define LOKI_DATAGENERATORS_H
-
-// $Header: /cvsroot/loki-lib/loki/include/loki/DataGenerators.h,v 1.4 2006/01/16 19:05:09 rich_sposato Exp $
 
 #include "Typelist.h"
 
@@ -111,14 +109,5 @@ namespace Loki
     }//ns TL
 }//ns Loki
 
-#endif //DATAGENERATORS_H
-////////////////////////////////////////////////////////////////////////////////
-// Change log:
-// 9/20/02 Named changed from GenData to IterateTypes
-// 10/8/02 insertion iterators are passed-by-value, not by-reference (oops)
-////////////////////////////////////////////////////////////////////////////////
+#endif // end file guardian
 
-// $Log: DataGenerators.h,v $
-// Revision 1.4  2006/01/16 19:05:09  rich_sposato
-// Added cvs keywords.
-//

@@ -12,7 +12,8 @@
 #ifndef CLASSLIST_H
 #define CLASSLIST_H
 
-// $Header: /cvsroot/loki-lib/loki/test/Register/classlist.h,v 1.3 2006/06/19 12:46:22 syntheticpp Exp $
+// $Id: classlist.h 760 2006-10-17 20:36:13Z syntheticpp $
+
 
 #include <string>
 

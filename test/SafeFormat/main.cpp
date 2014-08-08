@@ -9,7 +9,8 @@
 //     warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/SafeFormat/main.cpp,v 1.18 2006/01/25 18:34:11 rich_sposato Exp $
+// $Id: main.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+
 
 #include <loki/SafeFormat.h>
 #include <iostream>
@@ -239,3 +240,21 @@ int main(int argc, char** argv)
         }
     }
 }
+
+void test_dword()
+{
+    typedef signed int Int;
+    typedef unsigned int UInt;
+    typedef signed long Long;
+    typedef unsigned long ULong;
+	Int i(0);
+    UInt ui(0);
+    Long l(0);
+    ULong ul(0);
+	Printf("%d")(i);
+    Printf("%d")(ui);
+    Printf("%d")(l);
+    Printf("%d")(ul);
+}
+
+

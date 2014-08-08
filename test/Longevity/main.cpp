@@ -8,6 +8,9 @@
 // for any purpose. It is provided "as is" without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
+// $Id: main.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+
+
 // This is an example of using the SetLongevity function for both
 // singletons and globally and locally defined dynamically allocated
 // objects.
@@ -48,7 +51,7 @@
 //    longevity 40 30 20 10
 //
 
-// $Header: /cvsroot/loki-lib/loki/test/Longevity/main.cpp,v 1.5 2006/01/25 18:34:10 rich_sposato Exp $
+// $Header$
 
 #include <iostream>
 #include <loki/Singleton.h>   // for Loki::SingletonHolder

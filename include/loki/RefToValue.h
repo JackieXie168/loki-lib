@@ -10,8 +10,11 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
-#ifndef LOKI_REFTOVALUE_H
-#define LOKI_REFTOVALUE_H
+#ifndef LOKI_REFTOVALUE_INC_
+#define LOKI_REFTOVALUE_INC_
+
+// $Id: RefToValue.h 751 2006-10-17 19:50:37Z syntheticpp $
+
 
 namespace Loki
 {
@@ -63,6 +66,5 @@ namespace Loki
 }
 
 
-
-#endif //LOKI_REFTOVALUE_H
+#endif // end file guardian
 

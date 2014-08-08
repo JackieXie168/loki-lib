@@ -12,12 +12,11 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
-
-// $Header: /cvsroot/loki-lib/loki/include/loki/SmallObj.h,v 1.30 2006/06/19 12:39:08 syntheticpp Exp $
-
-
 #ifndef LOKI_SMALLOBJ_INC_
 #define LOKI_SMALLOBJ_INC_
+
+// $Id: SmallObj.h 806 2007-02-03 00:01:52Z rich_sposato $
+
 
 #include "LokiExport.h"
 #include "Threads.h"
@@ -38,7 +37,7 @@
 #endif
 
 #ifndef LOKI_DEFAULT_SMALLOBJ_LIFETIME
-#define LOKI_DEFAULT_SMALLOBJ_LIFETIME LongevityLifetime::DieAsSmallObjectParent
+#define LOKI_DEFAULT_SMALLOBJ_LIFETIME ::Loki::LongevityLifetime::DieAsSmallObjectParent
 #endif
 
 #if defined(LOKI_SMALL_OBJECT_USE_NEW_ARRAY) && defined(_MSC_VER)
@@ -278,14 +277,14 @@ namespace Loki
 
     template
     <
-        template <class, class> class TM,
-        std::size_t CS,
-        std::size_t MSOS,
-        std::size_t OAS,
-        template <class> class LP,
-        class MX
+        template <class, class> class T,
+        std::size_t C,
+        std::size_t M,
+        std::size_t O,
+        template <class> class L,
+        class X
     >
-    void AllocatorSingleton< TM, CS, MSOS, OAS, LP, MX >::ClearExtraMemory( void )
+    void AllocatorSingleton< T, C, M, O, L, X >::ClearExtraMemory( void )
     {
         typename MyThreadingModel::Lock lock;
         (void)lock; // get rid of warning
@@ -294,14 +293,14 @@ namespace Loki
 
     template
     <
-        template <class, class> class TM,
-        std::size_t CS,
-        std::size_t MSOS,
-        std::size_t OAS,
-        template <class> class LP,
-        class MX
+        template <class, class> class T,
+        std::size_t C,
+        std::size_t M,
+        std::size_t O,
+        template <class> class L,
+        class X
     >
-    bool AllocatorSingleton< TM, CS, MSOS, OAS, LP, MX >::IsCorrupted( void )
+    bool AllocatorSingleton< T, C, M, O, L, X >::IsCorrupted( void )
     {
         typename MyThreadingModel::Lock lock;
         (void)lock; // get rid of warning
@@ -322,15 +321,15 @@ namespace Loki
      */
     template
     <
-        template <class, class> class TM,
-        std::size_t CS,
-        std::size_t MSOS,
-        std::size_t OAS,
-        template <class> class LP,
-        class MX
+        template <class, class> class T,
+        std::size_t C,
+        std::size_t M,
+        std::size_t O,
+        template <class> class L,
+        class X
     >
     inline unsigned int GetLongevity(
-        AllocatorSingleton< TM, CS, MSOS, OAS, LP, MX > * )
+        AllocatorSingleton< T, C, M, O, L, X > * )
     {
         // Returns highest possible value.
         return 0xFFFFFFFF;
@@ -345,6 +344,17 @@ namespace Loki
      called Small-Objects.  This class is not meant to be used directly by clients, 
      or derived from by clients. Class has no data members so compilers can 
      use Empty-Base-Optimization.
+
+     @par ThreadingModel
+     This class doesn't support ObjectLevelLockable policy for ThreadingModel.
+     The allocator is a singleton, so a per-instance mutex is not necessary.
+     Nor is using ObjectLevelLockable recommended with SingletonHolder since
+     the SingletonHolder::MakeInstance function requires a mutex that exists
+     prior to when the object is created - which is not possible if the mutex
+     is inside the object, such as required for ObjectLevelLockable.  If you
+     attempt to use ObjectLevelLockable, the compiler will emit errors because
+     it can't use the default constructor in ObjectLevelLockable.  If you need
+     a thread-safe allocator, use the ClassLevelLockable policy.
 
      @par Lifetime Policy
      
@@ -400,10 +410,10 @@ namespace Loki
         
         - Both Small-Object and Singleton use NoDestroy policy. 
           Since neither is ever destroyed, the destruction order does not matter.
-          Note: yow will get memory leaks!
+          Note: you will get memory leaks!
          
         - The Small-Object has NoDestroy policy but the Singleton has
-          SingletonWithLongevity policy. Note: yow will get memory leaks!
+          SingletonWithLongevity policy. Note: you will get memory leaks!
          
      
      You should *not* use NoDestroy for the singleton, and then use
@@ -557,7 +567,8 @@ namespace Loki
     protected:
         inline SmallObjectBase( void ) {}
         inline SmallObjectBase( const SmallObjectBase & ) {}
-        inline SmallObjectBase & operator = ( const SmallObjectBase & ) {}
+        inline SmallObjectBase & operator = ( const SmallObjectBase & )
+        { return *this; }
         inline ~SmallObjectBase() {}
     }; // end class SmallObjectBase
 
@@ -622,113 +633,12 @@ namespace Loki
     protected:
         inline SmallValueObject( void ) {}
         inline SmallValueObject( const SmallValueObject & ) {}
-        inline SmallValueObject & operator = ( const SmallValueObject & ) {}
+        inline SmallValueObject & operator = ( const SmallValueObject & )
+        { return *this; }
         inline ~SmallValueObject() {}
     }; // end class SmallValueObject
 
 } // namespace Loki
 
-////////////////////////////////////////////////////////////////////////////////
-// Change log:
-// June 20, 2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
-// Nov. 26, 2004: re-implemented by Rich Sposato.
-//
-// $Log: SmallObj.h,v $
-// Revision 1.30  2006/06/19 12:39:08  syntheticpp
-// replace tabs with 4 spaces
-//
-// Revision 1.29  2006/03/08 17:07:11  syntheticpp
-// replace tabs with 4 spaces in all files
-//
-// Revision 1.28  2006/02/27 19:59:20  syntheticpp
-// add support of loki.dll
-//
-// Revision 1.27  2006/02/20 21:56:06  rich_sposato
-// Fixed typo.
-//
-// Revision 1.26  2006/01/22 13:37:33  syntheticpp
-// use macro LOKI_DEFAULT_MUTEX for Mutex default value, defined in Threads.h
-//
-// Revision 1.25  2006/01/22 13:31:45  syntheticpp
-// add additional template parameter for the changed threading classes
-//
-// Revision 1.24  2005/12/08 22:09:08  rich_sposato
-// Added functions to check for memory corruption.  Also made some minor
-// coding changes.
-//
-// Revision 1.23  2005/11/13 16:51:22  syntheticpp
-// update documentation due to the new lifetime policies
-//
-// Revision 1.22  2005/11/07 12:06:43  syntheticpp
-// change lifetime policy DieOrder to a msvc7.1 compilable version. Make this the default lifetime for SmallObject
-//
-// Revision 1.21  2005/11/05 17:43:55  syntheticpp
-// disable FollowIntoDeath/DieOrder lifetime policies when using the msvc 7.1 compiler, bug article: 839821 'Microsoft has confirmed that this is a problem..'
-//
-// Revision 1.20  2005/11/02 20:01:10  syntheticpp
-// more doxygen documentation, modules added
-//
-// Revision 1.19  2005/11/01 11:11:52  syntheticpp
-// add lifetime policies to manage singleton lifetime dependencies: FollowIntoDeath and DieOrder. Change SmallObject.h to avoid memory leaks by default
-//
-// Revision 1.18  2005/10/30 14:03:23  syntheticpp
-// replace tabs space
-//
-// Revision 1.17  2005/10/29 08:10:13  syntheticpp
-// #undef LOKI_SMALL_OBJECT_USE_NEW_ARRAY when using a Microsoft compiler
-//
-// Revision 1.16  2005/10/26 00:50:44  rich_sposato
-// Minor changes to documentation comments.
-//
-// Revision 1.15  2005/10/15 19:41:23  syntheticpp
-// fix bug 1327060. Add missing template parameter to make different static variables possible
-//
-// Revision 1.14  2005/10/13 22:43:03  rich_sposato
-// Added documentation comments about lifetime policies.
-//
-// Revision 1.13  2005/10/07 01:22:09  rich_sposato
-// Added GetLongevity function so allocator can work with a certain lifetime
-// policy class used with Loki::SingletonHolder.
-//
-// Revision 1.12  2005/10/06 00:19:56  rich_sposato
-// Added clarifying comment about destructor.
-//
-// Revision 1.11  2005/09/27 00:41:13  rich_sposato
-// Added array forms of new and delete.
-//
-// Revision 1.10  2005/09/26 21:38:54  rich_sposato
-// Changed include path to be direct instead of relying upon project settings.
-//
-// Revision 1.9  2005/09/26 07:33:04  syntheticpp
-// move macros into LOKI_ namespace
-//
-// Revision 1.8  2005/09/09 00:24:59  rich_sposato
-// Added functions to trim extra memory within allocator.  Made a new_handler
-// function for allocator.  Added deallocator function for nothrow delete
-// operator to insure nothing is leaked when constructor throws.
-//
-// Revision 1.7  2005/09/01 22:01:33  rich_sposato
-// Added #ifdef to deal with MSVC warning about exception specification lists.
-//
-// Revision 1.6  2005/08/27 13:22:56  syntheticpp
-// samll fix
-//
-// Revision 1.5  2005/08/25 15:49:51  syntheticpp
-// small corrections
-//
-// Revision 1.4  2005/08/25 15:23:14  syntheticpp
-// small corrections
-//
-// Revision 1.3  2005/07/31 14:00:48  syntheticpp
-// make object level threading possible
-//
-// Revision 1.2  2005/07/31 13:51:31  syntheticpp
-// replace old implementation with the ingeious from Rich Sposato
-//
-// Revision 1.2  2005/07/22 00:22:38  rich_sposato
-// Added SmallValueObject, SmallObjectBase, and AllocatorSingleton classes.
-//
-////////////////////////////////////////////////////////////////////////////////
-
-#endif // SMALLOBJ_INC_
+#endif // end file guardian
 
