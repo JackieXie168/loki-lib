@@ -15,34 +15,14 @@
 #ifndef LOKI_SCOPEGUARD_H_
 #define LOKI_SCOPEGUARD_H_
 
+// $Header: /cvsroot/loki-lib/loki/include/loki/ScopeGuard.h,v 1.6 2006/02/14 12:11:06 syntheticpp Exp $
+
+#include <loki/RefToValue.h>
+
 /// \defgroup ExceptionGroup Exception-safe code
 
 namespace Loki
 {
-
-    template <class T>
-    class RefHolder
-    {
-        T& ref_;
-    public:
-        RefHolder(T& ref) : ref_(ref) 
-        {}
-
-        operator T& () const 
-        {
-            return ref_;
-        }
-
-    private:
-        // Disable assignment - not implemented
-        RefHolder& operator=(const RefHolder&);
-    };
-
-    template <class T>
-    inline RefHolder<T> ByRef(T& t)
-    {
-        return RefHolder<T>(t);
-    }
 
     class ScopeGuardImplBase
     {
@@ -381,3 +361,14 @@ namespace Loki
 #define LOKI_ON_BLOCK_EXIT_OBJ  ScopeGuard LOKI_ANONYMOUS_VARIABLE(scopeGuard) = MakeObjGuard
 
 #endif //LOKI_SCOPEGUARD_H_
+
+// $Log: ScopeGuard.h,v $
+// Revision 1.6  2006/02/14 12:11:06  syntheticpp
+// don't break old ScopeGuard code
+//
+// Revision 1.5  2006/02/14 11:54:46  syntheticpp
+// rename SmartPtr-ByRef and ScopeGuard-ByRefHolder into RefToValue and move it to loki/RefToValue.h
+//
+// Revision 1.4  2006/01/16 19:05:09  rich_sposato
+// Added cvs keywords.
+//

@@ -1,3 +1,18 @@
+////////////////////////////////////////////////////////////////////////////////
+// The Loki Library
+// Copyright (c) 2001 by Andrei Alexandrescu
+// This code accompanies the book:
+// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design 
+//     Patterns Applied". Copyright (c) 2001. Addison-Wesley.
+// Permission to use, copy, modify, distribute and sell this software for any 
+//     purpose is hereby granted without fee, provided that the above copyright 
+//     notice appear in all copies and that both that copyright notice and this 
+//     permission notice appear in supporting documentation.
+// The author or Addison-Wesley Longman make no representations about the 
+//     suitability of this software for any purpose. It is provided "as is" 
+//     without express or implied warranty.
+////////////////////////////////////////////////////////////////////////////////
+
 #ifndef LOKI_THREADS_H_
 #define LOKI_THREADS_H_
 
@@ -5,7 +20,7 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/include/loki/Threads.h,v 1.19 2005/11/15 11:08:57 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/include/loki/Threads.h,v 1.27 2006/01/22 15:33:41 syntheticpp Exp $
 
 ///  @defgroup  ThreadingGroup Threading
 ///  Policies to for the threading model:
@@ -34,6 +49,7 @@
 ///  - POSIX (pthread.h)
 
 
+#include <cassert>
 
 #if defined(LOKI_CLASS_LEVEL_THREADING) || defined(LOKI_OBJECT_LEVEL_THREADING)
 
@@ -57,20 +73,113 @@
     #define LOKI_DEFAULT_THREADING_NO_OBJ_LEVEL ::Loki::SingleThreaded
     
 #endif
+    
+#ifndef LOKI_DEFAULT_MUTEX
+#define LOKI_DEFAULT_MUTEX ::Loki::Mutex
+#endif
 
-#include <cassert>
+#if defined(_WINDOWS_) || defined(_WINDOWS_H) 
+
+#define LOKI_THREADS_MUTEX(x)           CRITICAL_SECTION x
+#define LOKI_THREADS_MUTEX_INIT(x)      ::InitializeCriticalSection x
+#define LOKI_THREADS_MUTEX_DELETE(x)    ::DeleteCriticalSection x
+#define LOKI_THREADS_MUTEX_LOCK(x)      ::EnterCriticalSection x
+#define LOKI_THREADS_MUTEX_UNLOCK(x)    ::LeaveCriticalSection x
+#define LOKI_THREADS_LONG               LONG
+
+#define LOKI_THREADS_ATOMIC_FUNCTIONS                                   \
+        static IntType AtomicIncrement(volatile IntType& lval)          \
+        { return InterlockedIncrement(&const_cast<IntType&>(lval)); }   \
+                                                                        \
+        static IntType AtomicDecrement(volatile IntType& lval)          \
+        { return InterlockedDecrement(&const_cast<IntType&>(lval)); }   \
+                                                                        \
+        static void AtomicAssign(volatile IntType& lval, IntType val)   \
+        { InterlockedExchange(&const_cast<IntType&>(lval), val); }      \
+                                                                        \
+        static void AtomicAssign(IntType& lval, volatile IntType& val)  \
+        { InterlockedExchange(&lval, val); }
+
+
+
+#elif defined(_PTHREAD_H) //POSIX threads (pthread.h)
+
+
+#define LOKI_THREADS_MUTEX(x)           pthread_mutex_t x
+#define LOKI_THREADS_MUTEX_INIT(x)      ::pthread_mutex_init(x,0)
+#define LOKI_THREADS_MUTEX_DELETE(x)    ::pthread_mutex_destroy x
+#define LOKI_THREADS_MUTEX_LOCK(x)      ::pthread_mutex_lock x
+#define LOKI_THREADS_MUTEX_UNLOCK(x)    ::pthread_mutex_unlock x
+#define LOKI_THREADS_LONG               long
+
+#define LOKI_THREADS_ATOMIC(x)                                           \
+                pthread_mutex_lock(&atomic_mutex_);                      \
+                x;                                                       \
+                pthread_mutex_unlock(&atomic_mutex_)    
+                
+#define LOKI_THREADS_ATOMIC_FUNCTIONS                                    \
+        private:                                                         \
+            static pthread_mutex_t atomic_mutex_;                        \
+        public:                                                          \
+        static IntType AtomicIncrement(volatile IntType& lval)           \
+        { LOKI_THREADS_ATOMIC( lval++ ); return lval; }                  \
+                                                                         \
+        static IntType AtomicDecrement(volatile IntType& lval)           \
+        { LOKI_THREADS_ATOMIC(lval-- ); return lval; }                   \
+                                                                         \
+        static void AtomicAssign(volatile IntType& lval, IntType val)    \
+        { LOKI_THREADS_ATOMIC( lval = val ); }                           \
+                                                                         \
+        static void AtomicAssign(IntType& lval, volatile IntType& val)   \
+        { LOKI_THREADS_ATOMIC( lval = val ); }            
+
+#else // single threaded
+
+#define LOKI_THREADS_MUTEX(x)
+#define LOKI_THREADS_MUTEX_INIT(x)      
+#define LOKI_THREADS_MUTEX_DELETE(x)       
+#define LOKI_THREADS_MUTEX_LOCK(x)         
+#define LOKI_THREADS_MUTEX_UNLOCK(x)       
+#define LOKI_THREADS_LONG               
+
+#endif
+
+
 
 namespace Loki
 {
-    
+
     ////////////////////////////////////////////////////////////////////////////////
+    ///  \class Mutex
+    //
+    ///  \ingroup ThreadingGroup
+    ///  A simple and portable Mutex.  A default policy class for locking objects.
+    ////////////////////////////////////////////////////////////////////////////////
+
+    class Mutex
+    {
+    public:
+        Mutex()       { LOKI_THREADS_MUTEX_INIT  ( (&mtx_) ); }
+        ~Mutex()      { LOKI_THREADS_MUTEX_DELETE( (&mtx_) ); }
+        void Lock()   { LOKI_THREADS_MUTEX_LOCK  ( (&mtx_) ); }
+        void Unlock() { LOKI_THREADS_MUTEX_UNLOCK( (&mtx_) ); }
+    private:
+        /// Copy-constructor not implemented.
+        Mutex( const Mutex & );
+        /// Copy-assignement operator not implemented.
+        Mutex & operator = ( const Mutex & );
+        LOKI_THREADS_MUTEX(mtx_;)
+    };
+
+
+     ////////////////////////////////////////////////////////////////////////////////
     ///  \class SingleThreaded
     ///
     ///  \ingroup ThreadingGroup
     ///  Implementation of the ThreadingModel policy used by various classes
     ///  Implements a single-threaded model; no synchronization
     ////////////////////////////////////////////////////////////////////////////////
-    template <class Host>
+    template <class Host, class MutexPolicy = LOKI_DEFAULT_MUTEX>
     class SingleThreaded
     {
     public:
@@ -112,63 +221,6 @@ namespace Loki
         { lval = val; }
     };
     
-#if defined(_WINDOWS_) || defined(_WINDOWS_H) 
-
-#define LOKI_THREADS_MUTEX              CRITICAL_SECTION
-#define LOKI_THREADS_MUTEX_INIT         ::InitializeCriticalSection
-#define LOKI_THREADS_MUTEX_DELETE       ::DeleteCriticalSection
-#define LOKI_THREADS_MUTEX_LOCK         ::EnterCriticalSection
-#define LOKI_THREADS_MUTEX_UNLOCK       ::LeaveCriticalSection
-#define LOKI_THREADS_LONG               LONG
-
-#define LOKI_THREADS_ATOMIC_FUNCTIONS                                   \
-        static IntType AtomicIncrement(volatile IntType& lval)          \
-        { return InterlockedIncrement(&const_cast<IntType&>(lval)); }   \
-                                                                        \
-        static IntType AtomicDecrement(volatile IntType& lval)          \
-        { return InterlockedDecrement(&const_cast<IntType&>(lval)); }   \
-                                                                        \
-        static void AtomicAssign(volatile IntType& lval, IntType val)   \
-        { InterlockedExchange(&const_cast<IntType&>(lval), val); }      \
-                                                                        \
-        static void AtomicAssign(IntType& lval, volatile IntType& val)  \
-        { InterlockedExchange(&lval, val); }
-
-
-
-#elif defined(_PTHREAD_H) //POSIX threads (pthread.h)
-
-
-#define LOKI_THREADS_MUTEX              pthread_mutex_t
-#define LOKI_THREADS_MUTEX_INIT(x)      ::pthread_mutex_init(x,0)
-#define LOKI_THREADS_MUTEX_DELETE       ::pthread_mutex_destroy
-#define LOKI_THREADS_MUTEX_LOCK         ::pthread_mutex_lock
-#define LOKI_THREADS_MUTEX_UNLOCK       ::pthread_mutex_unlock
-#define LOKI_THREADS_LONG               long
-
-#define LOKI_THREADS_ATOMIC(x)                                           \
-                pthread_mutex_lock(&atomic_mutex_);                      \
-                x;                                                       \
-                pthread_mutex_unlock(&atomic_mutex_)    
-                
-#define LOKI_THREADS_ATOMIC_FUNCTIONS                                    \
-        private:                                                         \
-            static pthread_mutex_t atomic_mutex_;                        \
-        public:                                                          \
-        static IntType AtomicIncrement(volatile IntType& lval)           \
-        { LOKI_THREADS_ATOMIC( lval++ ); return lval; }                  \
-                                                                         \
-        static IntType AtomicDecrement(volatile IntType& lval)           \
-        { LOKI_THREADS_ATOMIC(lval-- ); return lval; }                   \
-                                                                         \
-        static void AtomicAssign(volatile IntType& lval, IntType val)    \
-        { LOKI_THREADS_ATOMIC( lval = val ); }                           \
-                                                                         \
-        static void AtomicAssign(IntType& lval, volatile IntType& val)   \
-        { LOKI_THREADS_ATOMIC( lval = val ); }            
-
-#endif
-
 
 #if defined(_WINDOWS_) || defined(_WINDOWS_H) || defined(_PTHREAD_H) 
 
@@ -179,26 +231,17 @@ namespace Loki
     ///  Implementation of the ThreadingModel policy used by various classes
     ///  Implements a object-level locking scheme
     ////////////////////////////////////////////////////////////////////////////////
-    template <class Host>
+    template < class Host, class MutexPolicy = LOKI_DEFAULT_MUTEX >
     class ObjectLevelLockable
     {
-        mutable LOKI_THREADS_MUTEX mtx_;
+        mutable MutexPolicy mtx_;
 
     public:
-        ObjectLevelLockable()
-        {
-           LOKI_THREADS_MUTEX_INIT(&mtx_);
-        }
-        
-        ObjectLevelLockable(const ObjectLevelLockable&)
-        {
-            LOKI_THREADS_MUTEX_INIT(&mtx_);
-        }
+        ObjectLevelLockable() : mtx_() {}
 
-        ~ObjectLevelLockable()
-        {
-            LOKI_THREADS_MUTEX_DELETE(&mtx_);
-        }
+        ObjectLevelLockable(const ObjectLevelLockable&) : mtx_() {}
+
+        ~ObjectLevelLockable() {}
 
         class Lock;
         friend class Lock;
@@ -212,21 +255,21 @@ namespace Loki
             /// Lock object
             explicit Lock(const ObjectLevelLockable& host) : host_(host)
             {
-                LOKI_THREADS_MUTEX_LOCK(&host_.mtx_);
+                host_.mtx_.Lock();
             }
 
             /// Lock object
             explicit Lock(const ObjectLevelLockable* host) : host_(*host)
             {
-                LOKI_THREADS_MUTEX_LOCK(&host_.mtx_);
+                host_.mtx_.Lock();
             }
-            
+
             /// Unlock object
             ~Lock()
             {
-                LOKI_THREADS_MUTEX_UNLOCK(&host_.mtx_);
+                host_.mtx_.Unlock();
             }
-            
+
         private:
             /// private by design of the object level threading
             Lock();
@@ -244,8 +287,8 @@ namespace Loki
     };
 
 #if defined(_PTHREAD_H) 
-    template <class Host>
-    pthread_mutex_t ObjectLevelLockable<Host>::atomic_mutex_ = PTHREAD_MUTEX_INITIALIZER;
+    template <class Host, class MutexPolicy>
+    pthread_mutex_t ObjectLevelLockable<Host, MutexPolicy>::atomic_mutex_ = PTHREAD_MUTEX_INITIALIZER;
 #endif
     
     ////////////////////////////////////////////////////////////////////////////////
@@ -255,33 +298,31 @@ namespace Loki
     ///  Implementation of the ThreadingModel policy used by various classes
     ///  Implements a class-level locking scheme
     ////////////////////////////////////////////////////////////////////////////////
-    template <class Host>
+    template <class Host, class MutexPolicy = LOKI_DEFAULT_MUTEX >
     class ClassLevelLockable
     {
         struct Initializer
         {   
-            LOKI_THREADS_MUTEX mtx_;
             bool init_;
+            MutexPolicy mtx_;
 
-            Initializer() : init_(false)
+            Initializer() : init_(false), mtx_()
             {
-                LOKI_THREADS_MUTEX_INIT(&mtx_);
                 init_ = true;
             }
             ~Initializer()
             {
                 assert(init_);
-                LOKI_THREADS_MUTEX_DELETE(&mtx_);
             }
         };
-        
+
         static Initializer initializer_;
 
     public:
-    
+
         class Lock;
         friend class Lock;
-        
+
         ///  \struct Lock
         ///  Lock class to lock on class level
         class Lock
@@ -292,30 +333,30 @@ namespace Loki
             Lock()
             {
                 assert(initializer_.init_);
-                LOKI_THREADS_MUTEX_LOCK(&initializer_.mtx_);
+                initializer_.mtx_.Lock();
             }
-            
+
             /// Lock class
             explicit Lock(const ClassLevelLockable&)
             {
                 assert(initializer_.init_);
-                LOKI_THREADS_MUTEX_LOCK(&initializer_.mtx_);
+                initializer_.mtx_.Lock();
             }
-            
+
             /// Lock class
             explicit Lock(const ClassLevelLockable*)
             {
                 assert(initializer_.init_);
-                LOKI_THREADS_MUTEX_LOCK(&initializer_.mtx_);
+                initializer_.mtx_.Lock();
             }
-            
+
             /// Unlock class
             ~Lock()
             {
                 assert(initializer_.init_);
-                LOKI_THREADS_MUTEX_UNLOCK(&initializer_.mtx_);
+                initializer_.mtx_.Unlock();
             }
-            
+
         private:
             Lock(const Lock&);
             Lock& operator=(const Lock&);
@@ -330,13 +371,13 @@ namespace Loki
     };
 
 #if defined(_PTHREAD_H) 
-    template <class Host>
-    pthread_mutex_t ClassLevelLockable<Host>::atomic_mutex_ = PTHREAD_MUTEX_INITIALIZER;
+    template <class Host, class MutexPolicy>
+    pthread_mutex_t ClassLevelLockable<Host, MutexPolicy>::atomic_mutex_ = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
-    template <class Host>
-    typename ClassLevelLockable<Host>::Initializer 
-    ClassLevelLockable<Host>::initializer_;
+    template < class Host, class MutexPolicy >
+    typename ClassLevelLockable< Host, MutexPolicy >::Initializer 
+    ClassLevelLockable< Host, MutexPolicy >::initializer_;
 
 #endif // defined(_WINDOWS_) || defined(_WINDOWS_H) || defined(_PTHREAD_H) 
   
@@ -354,6 +395,30 @@ namespace Loki
 #endif
 
 // $Log: Threads.h,v $
+// Revision 1.27  2006/01/22 15:33:41  syntheticpp
+// a -pedantic fix
+//
+// Revision 1.26  2006/01/22 13:37:33  syntheticpp
+// use macro LOKI_DEFAULT_MUTEX for Mutex default value, defined in Threads.h
+//
+// Revision 1.25  2006/01/22 00:32:29  syntheticpp
+// add dummy Mutex for single threading and additional template parameter
+//
+// Revision 1.24  2006/01/21 14:11:09  syntheticpp
+// complete usage of Loki::Mutex, gcc can't compile without these corrections
+//
+// Revision 1.23  2006/01/21 13:09:45  syntheticpp
+// don't compile Mutex when multi threading is disabled
+//
+// Revision 1.22  2006/01/21 01:05:44  rich_sposato
+// Removed volatile keyword from 2 data members.
+//
+// Revision 1.21  2006/01/21 01:02:12  rich_sposato
+// Added Mutex class to Loki.  Made it the default policy class for locking.
+//
+// Revision 1.20  2006/01/16 19:05:09  rich_sposato
+// Added cvs keywords.
+//
 // Revision 1.19  2005/11/15 11:08:57  syntheticpp
 // also compile with the original gnu pthread.h
 //

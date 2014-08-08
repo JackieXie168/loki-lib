@@ -16,6 +16,9 @@
 #ifndef LOKI_SINGLETON_INC_
 #define LOKI_SINGLETON_INC_
 
+// $Header: /cvsroot/loki-lib/loki/include/loki/Singleton.h,v 1.28 2006/03/03 11:58:24 syntheticpp Exp $
+
+#include "LokiExport.h"
 #include "Threads.h"
 #include <algorithm>
 #include <stdexcept>
@@ -25,7 +28,6 @@
 #include <vector>
 #include <list>
 #include <memory>
-
 
 #ifdef _MSC_VER
 #define LOKI_C_CALLING_CONVENTION_QUALIFIER __cdecl 
@@ -46,7 +48,12 @@ namespace Loki
 
     namespace Private
     {
+
+#ifndef LOKI_MAKE_DLL
         void LOKI_C_CALLING_CONVENTION_QUALIFIER AtExitFn(); // declaration needed below   
+#else
+        void LOKI_EXPORT AtExitFn();
+#endif
 
         class LifetimeTracker;
 
@@ -56,7 +63,7 @@ namespace Loki
         // Helper data
         // std::list because of the inserts
         typedef std::list<LifetimeTracker*> TrackerArray;
-        extern TrackerArray* pTrackerArray;
+        extern LOKI_EXPORT TrackerArray* pTrackerArray;
 #else
         // Helper data
         typedef LifetimeTracker** TrackerArray;
@@ -221,6 +228,35 @@ namespace Loki
         { delete p; }
     };
     
+    ////////////////////////////////////////////////////////////////////////////////
+    ///  \struct CreateUsing
+    ///
+    ///  \ingroup CreationGroup
+    ///  Implementation of the CreationPolicy used by SingletonHolder
+    ///  Creates objects using a custom allocater.
+    ///  Usage: e.g. CreateUsing<std::allocator>::Allocator
+    ////////////////////////////////////////////////////////////////////////////////
+    template<template<class> class Alloc>
+    struct CreateUsing
+    {
+        template <class T>
+        struct Allocator
+        {
+            static Alloc<T> allocator;
+
+            static T* Create()
+            {
+                return new (allocator.allocate(1)) T;
+            }
+
+            static void Destroy(T* p)
+            {
+                //allocator.destroy(p);
+                p->~T();
+                allocator.deallocate(p,1);
+            }
+        };
+    };
     
     ////////////////////////////////////////////////////////////////////////////////
     ///  \struct CreateUsingMalloc
@@ -506,6 +542,8 @@ namespace Loki
         class SingletonFixedLongevity
         {
         public:
+            virtual ~SingletonFixedLongevity() {}
+            
             static void ScheduleDestruction(T* pObj, atexit_pfn_t pFun)
             {
                 Private::Adapter<T> adapter = { pFun };
@@ -673,11 +711,15 @@ namespace Loki
         typename T,
         template <class> class CreationPolicy = CreateUsingNew,
         template <class> class LifetimePolicy = DefaultLifetime,
-        template <class> class ThreadingModel = LOKI_DEFAULT_THREADING_NO_OBJ_LEVEL
+        template <class, class> class ThreadingModel = LOKI_DEFAULT_THREADING_NO_OBJ_LEVEL,
+        class MutexPolicy = LOKI_DEFAULT_MUTEX
     >
     class SingletonHolder
     {
     public:
+
+        ///  Type of the singleton object
+        typedef T ObjectType;
 
         ///  Returns a reference to singleton object
         static T& Instance();
@@ -691,7 +733,7 @@ namespace Loki
         SingletonHolder();
         
         // Data
-        typedef typename ThreadingModel<T*>::VolatileType PtrInstanceType;
+        typedef typename ThreadingModel<T*,MutexPolicy>::VolatileType PtrInstanceType;
         static PtrInstanceType pInstance_;
         static bool destroyed_;
     };
@@ -705,19 +747,21 @@ namespace Loki
         class T,
         template <class> class C,
         template <class> class L,
-        template <class> class M
+        template <class, class> class M,
+        class X
     >
-    typename SingletonHolder<T, C, L, M>::PtrInstanceType
-        SingletonHolder<T, C, L, M>::pInstance_;
+    typename SingletonHolder<T, C, L, M, X>::PtrInstanceType
+        SingletonHolder<T, C, L, M, X>::pInstance_;
 
     template
     <
         class T,
         template <class> class C,
         template <class> class L,
-        template <class> class M
+        template <class, class> class M,
+        class X
     >
-    bool SingletonHolder<T, C, L, M>::destroyed_;
+    bool SingletonHolder<T, C, L, M, X>::destroyed_;
 
     ////////////////////////////////////////////////////////////////////////////////
     // SingletonHolder::Instance
@@ -728,10 +772,11 @@ namespace Loki
         class T,
         template <class> class CreationPolicy,
         template <class> class LifetimePolicy,
-        template <class> class ThreadingModel
+        template <class, class> class ThreadingModel,
+        class MutexPolicy
     >
     inline T& SingletonHolder<T, CreationPolicy, 
-        LifetimePolicy, ThreadingModel>::Instance()
+        LifetimePolicy, ThreadingModel, MutexPolicy>::Instance()
     {
         if (!pInstance_)
         {
@@ -749,12 +794,13 @@ namespace Loki
         class T,
         template <class> class CreationPolicy,
         template <class> class LifetimePolicy,
-        template <class> class ThreadingModel
+        template <class, class> class ThreadingModel,
+        class MutexPolicy
     >
     void SingletonHolder<T, CreationPolicy, 
-        LifetimePolicy, ThreadingModel>::MakeInstance()
+        LifetimePolicy, ThreadingModel, MutexPolicy>::MakeInstance()
     {
-        typename ThreadingModel<SingletonHolder>::Lock guard;
+        typename ThreadingModel<SingletonHolder,MutexPolicy>::Lock guard;
         (void)guard;
         
         if (!pInstance_)
@@ -775,16 +821,51 @@ namespace Loki
         class T,
         template <class> class CreationPolicy,
         template <class> class L,
-        template <class> class M
+        template <class, class> class M,
+        class X
     >
     void LOKI_C_CALLING_CONVENTION_QUALIFIER 
-    SingletonHolder<T, CreationPolicy, L, M>::DestroySingleton()
+    SingletonHolder<T, CreationPolicy, L, M, X>::DestroySingleton()
     {
         assert(!destroyed_);
         CreationPolicy<T>::Destroy(pInstance_);
         pInstance_ = 0;
         destroyed_ = true;
     }
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    ///  \class  Singleton
+    ///
+    ///  \ingroup SingletonGroup
+    ///
+    ///  Convenience template to implement a getter function for a singleton object.
+    ///  Often needed in a shared library which hosts singletons.
+    ///  
+    ///  \par Usage
+    ///
+    ///  see test/SingletonDll
+    ///
+    ////////////////////////////////////////////////////////////////////////////////
+
+    template<class T>
+    class Singleton
+    {
+    public:
+        static T& Instance();
+    };
+
+    /// \def LOKI_SINGLETON_INSTANCE_DEFINITION(SHOLDER)
+    /// Convenience macro for the definition of the static Instance member function
+    /// Put this macro called with a SingletonHolder typedef into your cpp file.
+
+#define LOKI_SINGLETON_INSTANCE_DEFINITION(SHOLDER)                          \
+    template<>                                                               \
+    SHOLDER::ObjectType&  ::Loki::Singleton<SHOLDER::ObjectType>::Instance() \
+    {                                                                        \
+        return SHOLDER::Instance();                                          \
+    } 
+
 } // namespace Loki
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -800,3 +881,36 @@ namespace Loki
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif // SINGLETON_INC_
+
+// $Log: Singleton.h,v $
+// Revision 1.28  2006/03/03 11:58:24  syntheticpp
+// also compile with gcc
+//
+// Revision 1.27  2006/02/28 10:31:01  syntheticpp
+// replace tabs
+//
+// Revision 1.26  2006/02/28 10:30:17  syntheticpp
+// add singleton object getter function template
+//
+// Revision 1.25  2006/02/27 19:59:20  syntheticpp
+// add support of loki.dll
+//
+// Revision 1.24  2006/01/22 13:37:33  syntheticpp
+// use macro LOKI_DEFAULT_MUTEX for Mutex default value, defined in Threads.h
+//
+// Revision 1.23  2006/01/22 00:44:17  syntheticpp
+// add additional template parameter for the changed threading classes
+//
+// Revision 1.22  2006/01/19 23:11:55  lfittl
+// - Disabled -Weffc++ flag, fixing these warnings produces too much useless code
+// - Enabled -pedantic, -Wold-style-cast and -Wundef for src/ and test/
+//
+// Revision 1.21  2006/01/16 20:10:51  syntheticpp
+// another fight against tabs
+//
+// Revision 1.20  2006/01/16 19:56:30  syntheticpp
+// add support of allocators with a standard interface, thanks to Miguel A. Figueroa-Villanueva
+//
+// Revision 1.19  2006/01/16 19:05:09  rich_sposato
+// Added cvs keywords.
+//

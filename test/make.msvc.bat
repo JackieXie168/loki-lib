@@ -1,9 +1,9 @@
 
-cd Factory
+cd DeletableSingleton
 call make.msvc.bat
 cd ..
 
-cd flex_string
+cd Factory
 call make.msvc.bat
 cd ..
 
@@ -12,6 +12,14 @@ call make.msvc.bat
 cd ..
 
 cd OrderedStatic
+call make.msvc.bat
+cd ..
+
+cd Pimpl
+call make.msvc.bat
+cd ..
+
+cd Register
 call make.msvc.bat
 cd ..
 
@@ -31,7 +39,15 @@ cd Singleton
 call make.msvc.bat
 cd ..
 
+cd SingletonDll
+call make.msvc.bat
+cd ..
+
 cd SmallObj
+call make.msvc.bat
+cd ..
+
+cd SmartPtr
 call make.msvc.bat
 cd ..
 
@@ -39,3 +55,6 @@ cd Visitor
 call make.msvc.bat
 cd ..
 
+cd flex_string
+call make.msvc.bat
+cd ..

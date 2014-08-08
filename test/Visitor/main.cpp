@@ -10,7 +10,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header:
+// $Header: /cvsroot/loki-lib/loki/test/Visitor/main.cpp,v 1.4 2006/01/25 18:34:11 rich_sposato Exp $
 
 #include <loki/Visitor.h>
 #include <iostream>

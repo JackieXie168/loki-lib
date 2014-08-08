@@ -16,6 +16,8 @@
 #ifndef LOKI_SMARTPTR_INC_
 #define LOKI_SMARTPTR_INC_
 
+// $Header: /cvsroot/loki-lib/loki/include/loki/SmartPtr.h,v 1.24 2006/03/08 17:07:11 syntheticpp Exp $
+
 ///  \defgroup  SmartPointerGroup Smart pointers
 ///  Policy based implementation of a smart pointer
 ///  \defgroup  SmartPointerOwnershipGroup Ownership policies
@@ -27,10 +29,13 @@
 ///  \defgroup  SmartPointerCheckingGroup Checking policies
 ///  \ingroup   SmartPointerGroup
 
-
+#include "LokiExport.h"
 #include "SmallObj.h"
 #include "TypeManip.h"
 #include "static_check.h"
+#include "RefToValue.h"
+#include "ConstPolicy.h"
+
 #include <functional>
 #include <stdexcept>
 #include <cassert>
@@ -58,11 +63,11 @@ namespace Loki
 
         // The storage policy doesn't initialize the stored pointer 
         //     which will be initialized by the OwnershipPolicy's Clone fn
-        DefaultSPStorage(const DefaultSPStorage&)
+        DefaultSPStorage(const DefaultSPStorage&) : pointee_(0)
         {}
 
         template <class U>
-        DefaultSPStorage(const DefaultSPStorage<U>&) 
+        DefaultSPStorage(const DefaultSPStorage<U>&) : pointee_(0)
         {}
         
         DefaultSPStorage(const StoredType& p) : pointee_(p) {}
@@ -99,6 +104,69 @@ namespace Loki
         StoredType pointee_;
     };
 
+    
+////////////////////////////////////////////////////////////////////////////////
+///  \class ArrayStorage
+///
+///  \ingroup  SmartPointerStorageGroup 
+///  Implementation of the ArrayStorage used by SmartPtr
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class T>
+    class ArrayStorage
+    {
+    public:
+        typedef T* StoredType;    // the type of the pointee_ object
+        typedef T* PointerType;   // type returned by operator->
+        typedef T& ReferenceType; // type returned by operator*
+
+        ArrayStorage() : pointee_(Default()) 
+        {}
+
+        // The storage policy doesn't initialize the stored pointer 
+        //     which will be initialized by the OwnershipPolicy's Clone fn
+        ArrayStorage(const ArrayStorage&) : pointee_(0)
+        {}
+
+        template <class U>
+        ArrayStorage(const ArrayStorage<U>&) : pointee_(0)
+        {}
+        
+        ArrayStorage(const StoredType& p) : pointee_(p) {}
+        
+        PointerType operator->() const { return pointee_; }
+        
+        ReferenceType operator*() const { return *pointee_; }
+        
+        void Swap(ArrayStorage& rhs)
+        { std::swap(pointee_, rhs.pointee_); }
+    
+        // Accessors
+        friend inline PointerType GetImpl(const ArrayStorage& sp)
+        { return sp.pointee_; }
+        
+        friend inline const StoredType& GetImplRef(const ArrayStorage& sp)
+        { return sp.pointee_; }
+
+        friend inline StoredType& GetImplRef(ArrayStorage& sp)
+        { return sp.pointee_; }
+
+    protected:
+        // Destroys the data stored
+        // (Destruction might be taken over by the OwnershipPolicy)
+        void Destroy()
+        { delete [] pointee_; }
+        
+        // Default value to initialize the pointer
+        static StoredType Default()
+        { return 0; }
+    
+    private:
+        // Data
+        StoredType pointee_;
+    };
+
+
 ////////////////////////////////////////////////////////////////////////////////
 ///  \class RefCounted
 ///
@@ -112,10 +180,10 @@ namespace Loki
     {
     public:
         RefCounted() 
+            : pCount_(static_cast<uintptr_t*>(
+                SmallObject<>::operator new(sizeof(uintptr_t))))
         {
-            pCount_ = static_cast<unsigned int*>(
-                SmallObject<>::operator new(sizeof(unsigned int)));
-            assert(pCount_);
+            assert(pCount_!=0);
             *pCount_ = 1;
         }
         
@@ -139,7 +207,8 @@ namespace Loki
         {
             if (!--*pCount_)
             {
-                SmallObject<>::operator delete(pCount_, sizeof(unsigned int));
+                SmallObject<>::operator delete(pCount_, sizeof(uintptr_t));
+                pCount_ = NULL;
                 return true;
             }
             return false;
@@ -152,7 +221,7 @@ namespace Loki
 
     private:
         // Data
-        unsigned int* pCount_;
+        uintptr_t* pCount_;
     };
     
 ////////////////////////////////////////////////////////////////////////////////
@@ -164,13 +233,14 @@ namespace Loki
 ///  Policy Usage: RefCountedMTAdj<ThreadingModel>::RefCountedMT
 ////////////////////////////////////////////////////////////////////////////////
     
-    template <template <class> class ThreadingModel>
+    template <template <class, class> class ThreadingModel,
+              class MX = LOKI_DEFAULT_MUTEX >
     struct RefCountedMTAdj
     {
         template <class P>
-        class RefCountedMT : public ThreadingModel< RefCountedMT<P> >
+        class RefCountedMT : public ThreadingModel< RefCountedMT<P>, MX >
         {
-            typedef ThreadingModel< RefCountedMT<P> > base_type;
+            typedef ThreadingModel< RefCountedMT<P>, MX > base_type;
             typedef typename base_type::IntType       CountType;
             typedef volatile CountType               *CountPtrType;
 
@@ -182,7 +252,7 @@ namespace Loki
                         sizeof(*pCount_)));
                 assert(pCount_);
                 //*pCount_ = 1;
-                ThreadingModel<RefCountedMT>::AtomicAssign(*pCount_, 1);
+                ThreadingModel<RefCountedMT, MX>::AtomicAssign(*pCount_, 1);
             }
 
             RefCountedMT(const RefCountedMT& rhs) 
@@ -197,13 +267,13 @@ namespace Loki
 
             P Clone(const P& val)
             {
-                ThreadingModel<RefCountedMT>::AtomicIncrement(*pCount_);
+                ThreadingModel<RefCountedMT, MX>::AtomicIncrement(*pCount_);
                 return val;
             }
 
             bool Release(const P&)
             {
-                if (!ThreadingModel<RefCountedMT>::AtomicDecrement(*pCount_))
+                if (!ThreadingModel<RefCountedMT, MX>::AtomicDecrement(*pCount_))
                 {
                     SmallObject<LOKI_DEFAULT_THREADING_NO_OBJ_LEVEL>::operator delete(
                         const_cast<CountType *>(pCount_), 
@@ -285,7 +355,7 @@ namespace Loki
         static P Clone(const P& val)
         { return val->Clone(); }
         
-        static bool Release(const P& val)
+        static bool Release(const P&)
         { return true; }
         
         static void Swap(DeepCopy&)
@@ -304,73 +374,18 @@ namespace Loki
 
     namespace Private
     {
-        class RefLinkedBase
+        class LOKI_EXPORT RefLinkedBase
         {
         public:
             RefLinkedBase() 
             { prev_ = next_ = this; }
-            
-            RefLinkedBase(const RefLinkedBase& rhs) 
-            {
-                prev_ = &rhs;
-                next_ = rhs.next_;
-                prev_->next_ = this;
-                next_->prev_ = this;
-            }
-            
-            bool Release()
-            {
-                if (next_ == this)
-                {   
-                    assert(prev_ == this);
-                    return true;
-                }
-                prev_->next_ = next_;
-                next_->prev_ = prev_;
-                return false;
 
-            }
-            
-            void Swap(RefLinkedBase& rhs)
-            {
-                if (next_ == this)
-                {
-                    assert(prev_ == this);
-                    if (rhs.next_ == &rhs)
-                    {
-                        assert(rhs.prev_ == &rhs);
-                        // both lists are empty, nothing 2 do
-                        return;
-                    }
-                    prev_ = rhs.prev_;
-                    next_ = rhs.next_;
-                    prev_->next_ = next_->prev_ = this;
-                    rhs.next_ = rhs.prev_ = &rhs;
-                    return;
-                }
-                if (rhs.next_ == &rhs)
-                {
-                    rhs.Swap(*this);
-                    return;
-                }
-                if (next_ == &rhs ) // neighbours
-                {
-                    std::swap(prev_, next_);
-                    std::swap(rhs.prev_, rhs.next_);
-                    std::swap(rhs.prev_, next_);
-                    std::swap(rhs.prev_->next_,next_->prev_);
-                }
-                else                
-                {
-                    std::swap(prev_, rhs.prev_);
-                    std::swap(next_, rhs.next_);
-                    std::swap(prev_->next_, rhs.prev_->next_);
-                    std::swap(next_->prev_, rhs.next_->prev_);
-                }
-                
-                assert( next_ == this ? prev_ == this : prev_ != this);
-            }
-                
+            RefLinkedBase(const RefLinkedBase& rhs);
+
+            bool Release();
+
+            void Swap(RefLinkedBase& rhs);
+
             enum { destructiveCopy = false };
 
         private:
@@ -697,15 +712,18 @@ namespace Loki
         RejectNull(const RejectNull<P1>&)
         {}
         
-        static void OnInit(P val)
-        { if (!val) throw NullPointerException(); }
+        static void OnInit(P)
+        {}
 
-        static void OnDefault(P val)
-        { OnInit(val); }
+        static void OnDefault(P)
+        {}
         
         void OnDereference(P val)
-        { OnInit(val); }
+        { if (!val) throw NullPointerException(); }
         
+        void OnDereference(P val) const
+        { if (!val) throw NullPointerException(); }
+
         void Swap(RejectNull&)
         {}        
     };
@@ -737,31 +755,14 @@ namespace Loki
 
         void OnDereference(P val)
         { OnInit(val); }
-        
+
+        void OnDereference(P val) const
+        { OnInit(val); }
+
         void Swap(RejectNullStrict&)
         {}        
     };
 
-////////////////////////////////////////////////////////////////////////////////
-///  \class ByRef
-///
-///  \ingroup SmartPointerGroup 
-///  Transports a reference as a value
-///  Serves to implement the Colvin/Gibbons trick for SmartPtr
-////////////////////////////////////////////////////////////////////////////////
-
-    template <class T>
-    class ByRef
-    {
-    public:
-        ByRef(T& v) : value_(v) {}
-        operator T&() { return value_; }
-        // gcc doesn't like this:
-        // operator const T&() const { return value_; }
-    private:
-        ByRef& operator=(const ByRef &);
-        T& value_;
-    };
 
 ////////////////////////////////////////////////////////////////////////////////
 // class template SmartPtr (declaration)
@@ -774,9 +775,10 @@ namespace Loki
         template <class> class OwnershipPolicy = RefCounted,
         class ConversionPolicy = DisallowConversion,
         template <class> class CheckingPolicy = AssertCheck,
-        template <class> class StoragePolicy = DefaultSPStorage
-    >
-    class SmartPtr;
+        template <class> class StoragePolicy = DefaultSPStorage,
+        template<class> class ConstnessPolicy = LOKI_DEFAULT_CONSTNESS 
+     >
+     class SmartPtr;
 
 ////////////////////////////////////////////////////////////////////////////////
 // class template SmartPtrDef (definition)
@@ -790,7 +792,8 @@ namespace Loki
         template <class> class OwnershipPolicy = RefCounted,
         class ConversionPolicy = DisallowConversion,
         template <class> class CheckingPolicy = AssertCheck,
-        template <class> class StoragePolicy = DefaultSPStorage
+        template <class> class StoragePolicy = DefaultSPStorage,
+    	template<class> class ConstnessPolicy = LOKI_DEFAULT_CONSTNESS 
     >
     struct SmartPtrDef
     {
@@ -800,7 +803,8 @@ namespace Loki
             OwnershipPolicy,
             ConversionPolicy,
             CheckingPolicy,
-            StoragePolicy
+            StoragePolicy,
+        	ConstnessPolicy
         >
         type;
     };
@@ -814,6 +818,7 @@ namespace Loki
 ///  \param ConversionPolicy default = DisallowConversion,
 ///  \param CheckingPolicy default = AssertCheck,
 ///  \param StoragePolicy default = DefaultSPStorage
+///  \param ConstnessPolicy default = LOKI_DEFAULT_CONSTNESS
 ///
 ///  \par IMPORTANT NOTE
 ///  Due to threading issues, the OwnershipPolicy has been changed as follows:
@@ -829,7 +834,8 @@ namespace Loki
         template <class> class OwnershipPolicy,
         class ConversionPolicy,
         template <class> class CheckingPolicy,
-        template <class> class StoragePolicy
+        template <class> class StoragePolicy,
+        template <class> class ConstnessPolicy
     >
     class SmartPtr
         : public StoragePolicy<T>
@@ -843,13 +849,15 @@ namespace Loki
         typedef ConversionPolicy CP;
         
     public:
+        typedef typename ConstnessPolicy<T>::Type* ConstPointerType;
+        typedef typename ConstnessPolicy<T>::Type& ConstReferenceType;
+
         typedef typename SP::PointerType PointerType;
         typedef typename SP::StoredType StoredType;
         typedef typename SP::ReferenceType ReferenceType;
         
-        typedef typename Select<OP::destructiveCopy, 
-                SmartPtr, const SmartPtr>::Result
-            CopyArg;
+        typedef typename Select<OP::destructiveCopy,SmartPtr, const SmartPtr>::Result
+                CopyArg;
     
     private:
         struct NeverMatched;
@@ -884,9 +892,10 @@ namespace Loki
             template <class> class OP1,
             class CP1,
             template <class> class KP1,
-            template <class> class SP1
+            template <class> class SP1,
+            template <class> class CNP1
         >
-        SmartPtr(const SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs)
+        SmartPtr(const SmartPtr<T1, OP1, CP1, KP1, SP1, CNP1 >& rhs)
         : SP(rhs), OP(rhs), KP(rhs), CP(rhs)
         { GetImplRef(*this) = OP::Clone(GetImplRef(rhs)); }
 
@@ -896,18 +905,19 @@ namespace Loki
             template <class> class OP1,
             class CP1,
             template <class> class KP1,
-            template <class> class SP1
+            template <class> class SP1,
+            template <class> class CNP1
         >
-        SmartPtr(SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs)
+        SmartPtr(SmartPtr<T1, OP1, CP1, KP1, SP1, CNP1 >& rhs)
         : SP(rhs), OP(rhs), KP(rhs), CP(rhs)
         { GetImplRef(*this) = OP::Clone(GetImplRef(rhs)); }
 
-        SmartPtr(ByRef<SmartPtr> rhs)
+        SmartPtr(RefToValue<SmartPtr> rhs)
         : SP(rhs), OP(rhs), KP(rhs), CP(rhs)
         {}
         
-        operator ByRef<SmartPtr>()
-        { return ByRef<SmartPtr>(*this); }
+        operator RefToValue<SmartPtr>()
+        { return RefToValue<SmartPtr>(*this); }
 
         SmartPtr& operator=(CopyArg& rhs)
         {
@@ -922,9 +932,10 @@ namespace Loki
             template <class> class OP1,
             class CP1,
             template <class> class KP1,
-            template <class> class SP1
+            template <class> class SP1,
+            template <class> class CNP1
         >
-        SmartPtr& operator=(const SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs)
+        SmartPtr& operator=(const SmartPtr<T1, OP1, CP1, KP1, SP1, CNP1 >& rhs)
         {
             SmartPtr temp(rhs);
             temp.Swap(*this);
@@ -937,9 +948,10 @@ namespace Loki
             template <class> class OP1,
             class CP1,
             template <class> class KP1,
-            template <class> class SP1
+            template <class> class SP1,
+            template <class> class CNP1
         >
-        SmartPtr& operator=(SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs)
+        SmartPtr& operator=(SmartPtr<T1, OP1, CP1, KP1, SP1, CNP1 >& rhs)
         {
             SmartPtr temp(rhs);
             temp.Swap(*this);
@@ -977,7 +989,7 @@ namespace Loki
             return SP::operator->();
         }
 
-        PointerType operator->() const
+        ConstPointerType operator->() const
         {
             KP::OnDereference(GetImplRef(*this));
             return SP::operator->();
@@ -989,7 +1001,7 @@ namespace Loki
             return SP::operator*();
         }
         
-        ReferenceType operator*() const
+        ConstReferenceType operator*() const
         {
             KP::OnDereference(GetImplRef(*this));
             return SP::operator*();
@@ -1006,9 +1018,10 @@ namespace Loki
             template <class> class OP1,
             class CP1,
             template <class> class KP1,
-            template <class> class SP1
+            template <class> class SP1,
+            template <class> class CNP1
         >
-        bool operator==(const SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs) const
+        bool operator==(const SmartPtr<T1, OP1, CP1, KP1, SP1, CNP1 >& rhs) const
         { return GetImpl(*this) == GetImpl(rhs); }
 
         // Ambiguity buster
@@ -1018,9 +1031,10 @@ namespace Loki
             template <class> class OP1,
             class CP1,
             template <class> class KP1,
-            template <class> class SP1
+            template <class> class SP1,
+            template <class> class CNP1
         >
-        bool operator!=(const SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs) const
+        bool operator!=(const SmartPtr<T1, OP1, CP1, KP1, SP1, CNP1 >& rhs) const
         { return !(*this == rhs); }
 
         // Ambiguity buster
@@ -1030,9 +1044,10 @@ namespace Loki
             template <class> class OP1,
             class CP1,
             template <class> class KP1,
-            template <class> class SP1
+            template <class> class SP1,
+            template <class> class CNP1
         >
-        bool operator<(const SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs) const
+        bool operator<(const SmartPtr<T1, OP1, CP1, KP1, SP1, CNP1 >& rhs) const
         { return GetImpl(*this) < GetImpl(rhs); }
 
     private:
@@ -1086,9 +1101,10 @@ namespace Loki
         class CP,
         template <class> class KP,
         template <class> class SP,
+        template <class> class CNP1,
         typename U
     >
-    inline bool operator==(const SmartPtr<T, OP, CP, KP, SP>& lhs,
+    inline bool operator==(const SmartPtr<T, OP, CP, KP, SP, CNP1 >& lhs,
         U* rhs)
     { return GetImpl(lhs) == rhs; }
     
@@ -1104,10 +1120,11 @@ namespace Loki
         class CP,
         template <class> class KP,
         template <class> class SP,
+        template <class> class CNP1,
         typename U
     >
     inline bool operator==(U* lhs,
-        const SmartPtr<T, OP, CP, KP, SP>& rhs)
+        const SmartPtr<T, OP, CP, KP, SP, CNP1 >& rhs)
     { return rhs == lhs; }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1122,9 +1139,10 @@ namespace Loki
         class CP,
         template <class> class KP,
         template <class> class SP,
+        template <class> class CNP,
         typename U
     >
-    inline bool operator!=(const SmartPtr<T, OP, CP, KP, SP>& lhs,
+    inline bool operator!=(const SmartPtr<T, OP, CP, KP, SP, CNP >& lhs,
         U* rhs)
     { return !(lhs == rhs); }
     
@@ -1140,10 +1158,11 @@ namespace Loki
         class CP,
         template <class> class KP,
         template <class> class SP,
+        template <class> class CNP,
         typename U
     >
     inline bool operator!=(U* lhs,
-        const SmartPtr<T, OP, CP, KP, SP>& rhs)
+        const SmartPtr<T, OP, CP, KP, SP, CNP >& rhs)
     { return rhs != lhs; }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1158,9 +1177,10 @@ namespace Loki
         class CP,
         template <class> class KP,
         template <class> class SP,
+        template <class> class CNP,
         typename U
     >
-    inline bool operator<(const SmartPtr<T, OP, CP, KP, SP>& lhs,
+    inline bool operator<(const SmartPtr<T, OP, CP, KP, SP, CNP >& lhs,
         U* rhs);
         
 ////////////////////////////////////////////////////////////////////////////////
@@ -1175,10 +1195,11 @@ namespace Loki
         class CP,
         template <class> class KP,
         template <class> class SP,
+        template <class> class CNP,
         typename U
     >
     inline bool operator<(U* lhs,
-        const SmartPtr<T, OP, CP, KP, SP>& rhs);
+        const SmartPtr<T, OP, CP, KP, SP, CNP >& rhs);
         
 ////////////////////////////////////////////////////////////////////////////////
 //  operator> for lhs = SmartPtr, rhs = raw pointer -- NOT DEFINED
@@ -1192,9 +1213,10 @@ namespace Loki
         class CP,
         template <class> class KP,
         template <class> class SP,
+        template <class> class CNP,
         typename U
     >
-    inline bool operator>(const SmartPtr<T, OP, CP, KP, SP>& lhs,
+    inline bool operator>(const SmartPtr<T, OP, CP, KP, SP, CNP >& lhs,
         U* rhs)
     { return rhs < lhs; }
         
@@ -1210,10 +1232,11 @@ namespace Loki
         class CP,
         template <class> class KP,
         template <class> class SP,
+        template <class> class CNP,
         typename U
     >
     inline bool operator>(U* lhs,
-        const SmartPtr<T, OP, CP, KP, SP>& rhs)
+        const SmartPtr<T, OP, CP, KP, SP, CNP >& rhs)
     { return rhs < lhs; }
   
 ////////////////////////////////////////////////////////////////////////////////
@@ -1228,9 +1251,10 @@ namespace Loki
         class CP,
         template <class> class KP,
         template <class> class SP,
+        template <class> class CNP,
         typename U
     >
-    inline bool operator<=(const SmartPtr<T, OP, CP, KP, SP>& lhs,
+    inline bool operator<=(const SmartPtr<T, OP, CP, KP, SP, CNP >& lhs,
         U* rhs)
     { return !(rhs < lhs); }
         
@@ -1246,10 +1270,11 @@ namespace Loki
         class CP,
         template <class> class KP,
         template <class> class SP,
+        template <class> class CNP,
         typename U
     >
     inline bool operator<=(U* lhs,
-        const SmartPtr<T, OP, CP, KP, SP>& rhs)
+        const SmartPtr<T, OP, CP, KP, SP, CNP >& rhs)
     { return !(rhs < lhs); }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1264,9 +1289,10 @@ namespace Loki
         class CP,
         template <class> class KP,
         template <class> class SP,
+        template <class> class CNP,
         typename U
     >
-    inline bool operator>=(const SmartPtr<T, OP, CP, KP, SP>& lhs,
+    inline bool operator>=(const SmartPtr<T, OP, CP, KP, SP, CNP >& lhs,
         U* rhs)
     { return !(lhs < rhs); }
         
@@ -1282,10 +1308,11 @@ namespace Loki
         class CP,
         template <class> class KP,
         template <class> class SP,
+        template <class> class CNP,
         typename U
     >
     inline bool operator>=(U* lhs,
-        const SmartPtr<T, OP, CP, KP, SP>& rhs)
+        const SmartPtr<T, OP, CP, KP, SP, CNP >& rhs)
     { return !(lhs < rhs); }
 
 } // namespace Loki
@@ -1303,14 +1330,15 @@ namespace std
         template <class> class OP,
         class CP,
         template <class> class KP,
-        template <class> class SP
+        template <class> class SP,
+        template <class> class CNP
     >
-    struct less< Loki::SmartPtr<T, OP, CP, KP, SP> >
-        : public binary_function<Loki::SmartPtr<T, OP, CP, KP, SP>,
-            Loki::SmartPtr<T, OP, CP, KP, SP>, bool>
+    struct less< Loki::SmartPtr<T, OP, CP, KP, SP, CNP > >
+        : public binary_function<Loki::SmartPtr<T, OP, CP, KP, SP, CNP >,
+            Loki::SmartPtr<T, OP, CP, KP, SP, CNP >, bool>
     {
-        bool operator()(const Loki::SmartPtr<T, OP, CP, KP, SP>& lhs,
-            const Loki::SmartPtr<T, OP, CP, KP, SP>& rhs) const
+        bool operator()(const Loki::SmartPtr<T, OP, CP, KP, SP, CNP >& lhs,
+            const Loki::SmartPtr<T, OP, CP, KP, SP, CNP >& rhs) const
         { return less<T*>()(GetImpl(lhs), GetImpl(rhs)); }
     };
 }
@@ -1332,3 +1360,55 @@ namespace std
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif // SMARTPTR_INC_
+
+// $Log: SmartPtr.h,v $
+// Revision 1.24  2006/03/08 17:07:11  syntheticpp
+// replace tabs with 4 spaces in all files
+//
+// Revision 1.23  2006/02/28 16:55:56  syntheticpp
+// undo disabling checking, remove warnings, many thanks to Sam Miller
+//
+// Revision 1.22  2006/02/28 12:59:59  syntheticpp
+// fix wrong RejectNull implementation, thanks to Sam Miller
+//
+// Revision 1.21  2006/02/27 19:59:20  syntheticpp
+// add support of loki.dll
+//
+// Revision 1.20  2006/02/25 13:48:54  syntheticpp
+// add constness policy to doc
+//
+// Revision 1.19  2006/02/25 13:01:40  syntheticpp
+// add const member function OnDereference to non static RejectNull policies
+//
+// Revision 1.18  2006/02/25 01:52:17  rich_sposato
+// Moved a monolithic base class from header file to new source file.
+//
+// Revision 1.17  2006/02/19 22:04:28  rich_sposato
+// Moved Const-policy structs from SmartPtr.h to ConstPolicy.h.
+//
+// Revision 1.16  2006/02/14 11:54:46  syntheticpp
+// rename SmartPtr-ByRef and ScopeGuard-ByRefHolder into RefToValue and move it to loki/RefToValue.h
+//
+// Revision 1.15  2006/02/08 18:12:29  rich_sposato
+// Fixed bug 1425890.  Last SmartPtr in linked chain NULLs its prev & next
+// pointers to prevent infinite recursion.  Added asserts.
+//
+// Revision 1.14  2006/01/30 20:07:38  syntheticpp
+// replace tabss
+//
+// Revision 1.13  2006/01/30 20:01:37  syntheticpp
+// add ArrayStorage and propagating constness policies
+//
+// Revision 1.12  2006/01/27 08:58:17  syntheticpp
+// replace unsigned int with the platform independent uintptr_t to make it more 64bit portable, and work around for mac gcc 4.0.0 bug in assert
+//
+// Revision 1.11  2006/01/22 13:31:12  syntheticpp
+// add additional template parameter for the changed threading classes
+//
+// Revision 1.10  2006/01/18 17:21:31  lfittl
+// - Compile library with -Weffc++ and -pedantic (gcc)
+// - Fix most issues raised by using -Weffc++ (initialization lists)
+//
+// Revision 1.9  2006/01/16 19:05:09  rich_sposato
+// Added cvs keywords.
+//

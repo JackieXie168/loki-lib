@@ -13,7 +13,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header:
+// $Header: /cvsroot/loki-lib/loki/include/loki/Visitor.h,v 1.7 2006/01/16 19:05:09 rich_sposato Exp $
 
 ///  \defgroup VisitorGroup Visitor
 
@@ -359,3 +359,7 @@ struct DefaultCatchAll
 
 #endif // VISITOR_INC_
 
+// $Log: Visitor.h,v $
+// Revision 1.7  2006/01/16 19:05:09  rich_sposato
+// Added cvs keywords.
+//

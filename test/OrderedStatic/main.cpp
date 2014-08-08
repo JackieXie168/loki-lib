@@ -10,7 +10,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header:
+// $Header: /cvsroot/loki-lib/loki/test/OrderedStatic/main.cpp,v 1.9 2006/01/25 18:34:10 rich_sposato Exp $
 
 // define to test the OrderedStatic template
 #define TEST_ORDERED_STATIC

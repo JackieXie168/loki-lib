@@ -10,7 +10,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header:
+// $Header: /cvsroot/loki-lib/loki/test/flex_string/main.cpp,v 1.9 2006/01/25 18:34:11 rich_sposato Exp $
 
 #ifdef _MSC_VER
 
@@ -121,7 +121,7 @@ String Test(String, unsigned int count, bool avoidAliasing)
             // test copy constructor 21.3.1
             {
                 const size_type pos = random(0, test.size());
-                String s(test, pos, random(0, (typename String::size_type)(test.size() - pos)));
+                String s(test, pos, random(0, static_cast<typename String::size_type>(test.size() - pos)));
                 test = s;
             }
             break;

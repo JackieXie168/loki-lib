@@ -13,7 +13,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/src/SmallObj.cpp,v 1.25 2006/01/09 07:27:00 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/src/SmallObj.cpp,v 1.28 2006/02/14 18:20:21 rich_sposato Exp $
 
 
 #include <loki/SmallObj.h>
@@ -543,6 +543,8 @@ bool Chunk::IsBlockAvailable( void * p, unsigned char numBlocks,
 
 FixedAllocator::FixedAllocator()
     : blockSize_( 0 )
+    , numBlocks_( 0 )
+    , chunks_( 0 )
     , allocChunk_( NULL )
     , deallocChunk_( NULL )
     , emptyChunk_( NULL )
@@ -553,6 +555,10 @@ FixedAllocator::FixedAllocator()
 
 FixedAllocator::~FixedAllocator()
 {
+#ifdef DO_EXTRA_LOKI_TESTS
+    TrimEmptyChunk();
+    assert( chunks_.empty() && "Memory leak detected!" );
+#endif
     for ( ChunkIter i( chunks_.begin() ); i != chunks_.end(); ++i )
        i->Release();
 }
@@ -1113,7 +1119,7 @@ void * SmallObjAllocator::Allocate( std::size_t numBytes, bool doThrow )
 
     if ( ( NULL == place ) && doThrow )
     {
-#if _MSC_VER
+#ifdef _MSC_VER
         throw std::bad_alloc( "could not allocate small object" );
 #else
         // GCC did not like a literal string passed to std::bad_alloc.
@@ -1220,6 +1226,17 @@ bool SmallObjAllocator::IsCorrupt( void ) const
 ////////////////////////////////////////////////////////////////////////////////
 
 // $Log: SmallObj.cpp,v $
+// Revision 1.28  2006/02/14 18:20:21  rich_sposato
+// Added check for memory leak inside destructor.
+//
+// Revision 1.27  2006/01/19 23:11:56  lfittl
+// - Disabled -Weffc++ flag, fixing these warnings produces too much useless code
+// - Enabled -pedantic, -Wold-style-cast and -Wundef for src/ and test/
+//
+// Revision 1.26  2006/01/18 17:21:31  lfittl
+// - Compile library with -Weffc++ and -pedantic (gcc)
+// - Fix most issues raised by using -Weffc++ (initialization lists)
+//
 // Revision 1.25  2006/01/09 07:27:00  syntheticpp
 // replace tabs
 //

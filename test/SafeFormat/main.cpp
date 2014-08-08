@@ -9,6 +9,8 @@
 //     warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
+// $Header: /cvsroot/loki-lib/loki/test/SafeFormat/main.cpp,v 1.18 2006/01/25 18:34:11 rich_sposato Exp $
+
 #include <loki/SafeFormat.h>
 #include <iostream>
 #include <cassert>

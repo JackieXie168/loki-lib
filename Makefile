@@ -1,15 +1,22 @@
-DESTDIR := $(CURDIR)/$(DESTDIR)
+.PHONY: build-static build-shared check install clean-tmp clean
+build-static:
+	$(MAKE) -C src build-static
 
-.PHONY: build check install clean
-build:
-	$(MAKE) -C src
+build-shared:
+	$(MAKE) -C src build-shared
 
-check: build
+check: build-static
 	$(MAKE) -C test
 
 install:
-	$(MAKE) -C src install
+	$(MAKE) -C src install-static
 	$(MAKE) -C include install
+
+install-shared:
+	$(MAKE) -C src install-shared
+
+clean-tmp:
+	$(MAKE) -C src clean-tmp
 
 clean:
 	$(MAKE) -C src clean

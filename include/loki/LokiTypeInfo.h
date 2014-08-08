@@ -18,6 +18,8 @@
 #ifndef LOKI_LOKITYPEINFO_INC_
 #define LOKI_LOKITYPEINFO_INC_
 
+// $Header: /cvsroot/loki-lib/loki/include/loki/LokiTypeInfo.h,v 1.3 2006/01/16 19:05:09 rich_sposato Exp $
+
 #include <typeinfo>
 #include <cassert>
 #include "Typelist.h"
@@ -106,3 +108,8 @@ namespace Loki
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif // LOKITYPEINFO_INC_
+
+// $Log: LokiTypeInfo.h,v $
+// Revision 1.3  2006/01/16 19:05:09  rich_sposato
+// Added cvs keywords.
+//

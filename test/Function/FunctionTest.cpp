@@ -21,6 +21,11 @@ using namespace boost;
 
 #else
 
+#define LOKI_CLASS_LEVEL_THREADING
+
+// disable to see "static instantiation order fiasco" crash
+#define LOKI_FUNCTOR_IS_NOT_A_SMALLOBJECT
+
 #include <boost/ref.hpp>
 #include <loki/Function.h>
 using namespace Loki;
@@ -64,6 +69,12 @@ struct add_to_obj
     int value;
 };
 
+function<void()> static_func(write_five);
+
+static void test_static_function()
+{
+    static_func();
+}
 
 static void test_zero_args()
 {
@@ -713,33 +724,21 @@ static void test_ref()
 
 static void test_exception()
 {
-#ifndef TEST_LOKI_FUNCTION
-    boost::function<int (int, int)> f;
-#else
-    Loki::Function<int (int, int)> f;
-#endif
+    function<int (int, int)> f;
 
     try
     {
         f(5, 4);
         BOOST_CHECK(false);
     }
-#ifndef TEST_LOKI_FUNCTION
-    catch(boost::bad_function_call)
-#else
-    catch(Loki::bad_function_call)
-#endif
+    catch(bad_function_call)
     {
         // okay
     }
 }
 
 
-#ifndef TEST_LOKI_FUNCTION
-typedef boost::function< void * (void * reader) > reader_type;
-#else
-typedef Loki::Function< void * (void * reader) > reader_type;
-#endif
+typedef function< void * (void * reader) > reader_type;
 typedef std::pair<int, reader_type> mapped_type;
 
 static void test_implicit()
@@ -748,20 +747,12 @@ static void test_implicit()
     m = mapped_type();
 }
 
-#ifndef TEST_LOKI_FUNCTION
-static void test_call_obj(boost::function<int (int, int)> f)
-#else
-static void test_call_obj(Loki::function<int (int, int)> f)
-#endif
+static void test_call_obj(function<int (int, int)> f)
 {
     assert(!f.empty());
 }
 
-#ifndef TEST_LOKI_FUNCTION
-static void test_call_cref(const boost::function<int (int, int)>& f)
-#else
-static void test_call_cref(const Loki::Function<int (int, int)>& f)
-#endif
+static void test_call_cref(const function<int (int, int)>& f)
 {
     assert(!f.empty());
 }
@@ -774,6 +765,7 @@ static void test_call()
 
 int test_main(int, char* [])
 {
+    test_static_function();
     test_zero_args();
     test_one_arg();
     test_two_args();

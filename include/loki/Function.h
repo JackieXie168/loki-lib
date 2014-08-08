@@ -9,8 +9,12 @@
 //     suitability of this software for any purpose. It is provided "as is" 
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
+#ifndef LOKI_FUNCTION_INC_
+#define LOKI_FUNCTION_INC_
 
 #define LOKI_ENABLE_FUNCTION
+
+// $Header: /cvsroot/loki-lib/loki/include/loki/Function.h,v 1.9 2006/02/26 23:39:59 syntheticpp Exp $
 
 #include <loki/Functor.h>
 #include <loki/Sequence.h>
@@ -347,3 +351,12 @@ namespace Loki
 
 }// namespace Loki
 
+#endif
+
+// $Log: Function.h,v $
+// Revision 1.9  2006/02/26 23:39:59  syntheticpp
+// guard including
+//
+// Revision 1.8  2006/01/16 19:05:09  rich_sposato
+// Added cvs keywords.
+//

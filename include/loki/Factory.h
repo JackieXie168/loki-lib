@@ -10,11 +10,10 @@
 // The authors make no representations about the suitability of this software
 // for any purpose. It is provided "as is" without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
-
-// $Header: /cvsroot/loki-lib/loki/include/loki/Factory.h,v 1.13 2006/01/04 23:45:07 syntheticpp Exp $
-
 #ifndef LOKI_FACTORYPARM_INC_
 #define LOKI_FACTORYPARM_INC_
+
+// $Header: /cvsroot/loki-lib/loki/include/loki/Factory.h,v 1.16 2006/03/08 16:41:38 syntheticpp Exp $ /cvsroot/loki-lib/loki/include/loki/Factory.h,v 1.15 2006/01/19 23:11:55 lfittl Exp $
 
 #include "LokiTypeInfo.h"
 #include "Functor.h"
@@ -724,6 +723,7 @@ template <typename AP, typename Id, typename P1 >
     public:
 
         Factory()
+            : associations_()
         {
         }
 
@@ -1033,6 +1033,16 @@ template <typename AP, typename Id, typename P1 >
 #endif // FACTORY_INC_
 
 // $Log: Factory.h,v $
+// Revision 1.16  2006/03/08 16:41:38  syntheticpp
+// remove second $
+//
+// Revision 1.15  2006/01/19 23:11:55  lfittl
+// - Disabled -Weffc++ flag, fixing these warnings produces too much useless code
+// - Enabled -pedantic, -Wold-style-cast and -Wundef for src/ and test/
+//
+// Revision 1.14  2006/01/16 19:05:09  rich_sposato
+// Added cvs keywords.
+//
 // Revision 1.13  2006/01/04 23:45:07  syntheticpp
 // remove gcc 4.0 warnings, Thanks to Lukas Fittl
 //

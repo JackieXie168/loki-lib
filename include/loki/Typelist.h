@@ -16,6 +16,8 @@
 // Last update: October 10, 2002
 //Reference
 
+// $Header: /cvsroot/loki-lib/loki/include/loki/Typelist.h,v 1.5 2006/01/16 19:05:09 rich_sposato Exp $
+
 #ifndef LOKI_TYPELIST_INC_
 #define LOKI_TYPELIST_INC_
 
@@ -476,3 +478,8 @@ namespace Loki
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif // LOKI_TYPELIST_INC_
+
+// $Log: Typelist.h,v $
+// Revision 1.5  2006/01/16 19:05:09  rich_sposato
+// Added cvs keywords.
+//

@@ -48,6 +48,8 @@
 //    longevity 40 30 20 10
 //
 
+// $Header: /cvsroot/loki-lib/loki/test/Longevity/main.cpp,v 1.5 2006/01/25 18:34:10 rich_sposato Exp $
+
 #include <iostream>
 #include <loki/Singleton.h>   // for Loki::SingletonHolder
 

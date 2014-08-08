@@ -11,7 +11,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/SmallObj/SmallObjBench.cpp,v 1.18 2006/01/05 09:55:09 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/test/SmallObj/SmallObjBench.cpp,v 1.20 2006/01/25 18:07:40 rich_sposato Exp $
 
 //#define LOKI_CLASS_LEVEL_THREADING
 //#define LOKI_OBJECT_LEVEL_THREADING
@@ -195,11 +195,11 @@ int FUNC(void** arrv, const int N, int loop, Timer& t, const char* s)        \
 
 
 LOKI_SMALLOBJ_BENCH(delete_new        ,delete new T;)
-LOKI_SMALLOBJ_BENCH(delete_new_mal    ,std::free(std::malloc(sizeof(T))););
+LOKI_SMALLOBJ_BENCH(delete_new_mal    ,std::free(std::malloc(sizeof(T)));)
 LOKI_SMALLOBJ_BENCH(delete_new_all    ,std::allocator<T> st;st.deallocate(st.allocate(1), 1);)
 
 LOKI_SMALLOBJ_BENCH(delete_new_array    ,delete[] new T[N];)
-LOKI_SMALLOBJ_BENCH(delete_new_array_mal,std::free(std::malloc(sizeof(T[TN]))););
+LOKI_SMALLOBJ_BENCH(delete_new_array_mal,std::free(std::malloc(sizeof(T[TN])));)
 LOKI_SMALLOBJ_BENCH(delete_new_array_all,std::allocator<T[TN]> st;st.deallocate(st.allocate(1), 1);)
 
 LOKI_SMALLOBJ_BENCH_ARRAY(new_del_on_arr    , , arr[i] = new T; , 
@@ -243,7 +243,7 @@ LOKI_SMALLOBJ_BENCH_ARRAY(new_del_a_on_a_all,std::allocator<T[TN]> st ,
     cout << endl << endl;
 #endif
 
-#define LOKI_ALLOCATOR_PARAMETERS Loki::SingleThreaded, 4096, 32, 4, Loki::NoDestroy
+#define LOKI_ALLOCATOR_PARAMETERS Loki::SingleThreaded, 4096, 128, 4, Loki::NoDestroy
 
 template<unsigned int Size, int loop>
 void testSize()
@@ -324,6 +324,13 @@ int main()
 // ----------------------------------------------------------------------------
 
 // $Log: SmallObjBench.cpp,v $
+// Revision 1.20  2006/01/25 18:07:40  rich_sposato
+// Changed values for template parameters used to make SmallObject allocator.
+//
+// Revision 1.19  2006/01/19 23:11:57  lfittl
+// - Disabled -Weffc++ flag, fixing these warnings produces too much useless code
+// - Enabled -pedantic, -Wold-style-cast and -Wundef for src/ and test/
+//
 // Revision 1.18  2006/01/05 09:55:09  syntheticpp
 // assert, include path, and virtual ~ patches by Lukas Fittl
 //

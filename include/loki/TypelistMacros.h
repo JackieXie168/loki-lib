@@ -15,6 +15,8 @@
 
 //Reference
 
+// $Header: /cvsroot/loki-lib/loki/include/loki/TypelistMacros.h,v 1.2 2006/01/16 19:05:09 rich_sposato Exp $
+
 #ifndef LOKI_TYPELISTMACROS_INC_
 #define LOKI_TYPELISTMACROS_INC_
 
@@ -371,3 +373,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif // LOKI_TYPELISTMACROS_INC_
+
+// $Log: TypelistMacros.h,v $
+// Revision 1.2  2006/01/16 19:05:09  rich_sposato
+// Added cvs keywords.
+//

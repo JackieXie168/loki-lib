@@ -1,11 +1,10 @@
-OBJ = main.o
-BIN = main-gcc
-CXXFLAGS = -I../../include -Wall -O2 -DNDEBUG
-LIBS = 
+BIN = main
+CXXFLAGS = -Wall -Wold-style-cast -Wundef -Wsign-compare -Wconversion -Wpointer-arith -pedantic -fexpensive-optimizations -O3
+CPPFLAGS = -I../../include -DNDEBUG
+LDFLAGS = -L../../lib
+LDLIBS = -lloki
 
-$(BIN): $(OBJ)
-	$(CXX) -o $(BIN) $(OBJ) $(LIBS)
-
-.PHONY: clean
+.PHONY: build clean
+build: $(BIN)
 clean:
-	rm -f $(OBJ) $(BIN)
+	rm -f $(BIN) $(BIN).exe $(BIN).o

@@ -10,7 +10,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Header: /cvsroot/loki-lib/loki/test/SmallObj/timer.h,v 1.5 2005/10/30 14:03:23 syntheticpp Exp $
+// $Header: /cvsroot/loki-lib/loki/test/SmallObj/timer.h,v 1.6 2006/01/19 23:11:57 lfittl Exp $
 
 #ifndef LOKI_TEST_TIMER_H
 #define LOKI_TEST_TIMER_H
@@ -52,7 +52,7 @@ public:
     
     int rel(int t)
     {
-        return ( t100==0 ? 100 : (int) floor(100.0*t/t100+0.5) ); 
+        return ( t100==0 ? 100 : static_cast<int>(floor(100.0*t/t100+0.5)) ); 
     }
     
     double speedup(int t)
@@ -75,6 +75,10 @@ private:
 #endif
 
 // $Log: timer.h,v $
+// Revision 1.6  2006/01/19 23:11:57  lfittl
+// - Disabled -Weffc++ flag, fixing these warnings produces too much useless code
+// - Enabled -pedantic, -Wold-style-cast and -Wundef for src/ and test/
+//
 // Revision 1.5  2005/10/30 14:03:23  syntheticpp
 // replace tabs space
 //
