@@ -1,4 +1,4 @@
-Last update: April 4, 2003
+Last update: Aug 29, 2002
 
 Directions:
 
@@ -18,7 +18,9 @@ Borland C++ Builder v6.0
 
 Mostly Supported:
 CodeWarrior 6.0
-Microsoft Visual C++ v6.0 (see readme for port)
+
+TypeList:
+Microsoft Visual C++ v6.0
 
 
 CodeWarrior has a problem with the Conversion template (see TypeManip.h) and, though it compiles it, it doesn't provide correct results. Consequently, the DerivedToFront algorithm in Typelist.h does not function. This affects the static dispatcher in Multimethods.h. As a fix, you must order the types (putting the most derived ones in the front) when providing the typelist argument to StaticDispatcher.

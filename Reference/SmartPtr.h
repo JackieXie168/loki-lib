@@ -73,11 +73,11 @@ namespace Loki
         friend inline PointerType GetImpl(const DefaultSPStorage& sp)
         { return sp.pointee_; }
         
-    	friend inline const StoredType& GetImplRef(const DefaultSPStorage& sp)
-    	{ return sp.pointee_; }
+        friend inline const StoredType& GetImplRef(const DefaultSPStorage& sp)
+        { return sp.pointee_; }
 
-    	friend inline StoredType& GetImplRef(DefaultSPStorage& sp)
-    	{ return sp.pointee_; }
+        friend inline StoredType& GetImplRef(DefaultSPStorage& sp)
+        { return sp.pointee_; }
 
     protected:
         // Destroys the data stored
@@ -779,13 +779,30 @@ namespace Loki
                 SmartPtr, const SmartPtr>::Result
             CopyArg;
     
+    private:
+        struct NeverMatched;
+       
+#ifdef LOKI_SMARTPTR_CONVERSION_CONSTRUCTOR_POLICY
+        typedef typename Select< CP::allow, const StoredType&, NeverMatched>::Result ImplicitArg;
+        typedef typename Select<!CP::allow, const StoredType&, NeverMatched>::Result ExplicitArg;
+#else
+        typedef const StoredType& ImplicitArg;
+        typedef typename Select<false, const StoredType&, NeverMatched>::Result ExplicitArg;
+#endif
+
+    public:
+
         SmartPtr()
         { KP::OnDefault(GetImpl(*this)); }
-    	
-        SmartPtr(const StoredType& p) : SP(p)
+        
+        explicit
+        SmartPtr(ExplicitArg p) : SP(p)
         { KP::OnInit(GetImpl(*this)); }
-    	
-    	SmartPtr(CopyArg& rhs)
+
+        SmartPtr(ImplicitArg p) : SP(p)
+        { KP::OnInit(GetImpl(*this)); }
+
+        SmartPtr(CopyArg& rhs)
         : SP(rhs), OP(rhs), KP(rhs), CP(rhs)
         { GetImplRef(*this) = OP::Clone(GetImplRef(rhs)); }
 
@@ -797,9 +814,9 @@ namespace Loki
             template <class> class KP1,
             template <class> class SP1
         >
-    	SmartPtr(const SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs)
-    	: SP(rhs), OP(rhs), KP(rhs), CP(rhs)
-    	{ GetImplRef(*this) = OP::Clone(GetImplRef(rhs)); }
+        SmartPtr(const SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs)
+        : SP(rhs), OP(rhs), KP(rhs), CP(rhs)
+        { GetImplRef(*this) = OP::Clone(GetImplRef(rhs)); }
 
         template
         <
@@ -809,23 +826,23 @@ namespace Loki
             template <class> class KP1,
             template <class> class SP1
         >
-    	SmartPtr(SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs)
-    	: SP(rhs), OP(rhs), KP(rhs), CP(rhs)
-    	{ GetImplRef(*this) = OP::Clone(GetImplRef(rhs)); }
+        SmartPtr(SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs)
+        : SP(rhs), OP(rhs), KP(rhs), CP(rhs)
+        { GetImplRef(*this) = OP::Clone(GetImplRef(rhs)); }
 
         SmartPtr(ByRef<SmartPtr> rhs)
-    	: SP(rhs), OP(rhs), KP(rhs), CP(rhs)
+        : SP(rhs), OP(rhs), KP(rhs), CP(rhs)
         {}
         
         operator ByRef<SmartPtr>()
         { return ByRef<SmartPtr>(*this); }
 
-    	SmartPtr& operator=(CopyArg& rhs)
-    	{
-    	    SmartPtr temp(rhs);
-    	    temp.Swap(*this);
-    	    return *this;
-    	}
+        SmartPtr& operator=(CopyArg& rhs)
+        {
+            SmartPtr temp(rhs);
+            temp.Swap(*this);
+            return *this;
+        }
 
         template
         <
@@ -835,13 +852,13 @@ namespace Loki
             template <class> class KP1,
             template <class> class SP1
         >
-    	SmartPtr& operator=(const SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs)
-    	{
-    	    SmartPtr temp(rhs);
-    	    temp.Swap(*this);
-    	    return *this;
-    	}
-    	
+        SmartPtr& operator=(const SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs)
+        {
+            SmartPtr temp(rhs);
+            temp.Swap(*this);
+            return *this;
+        }
+        
         template
         <
             typename T1,
@@ -850,37 +867,37 @@ namespace Loki
             template <class> class KP1,
             template <class> class SP1
         >
-    	SmartPtr& operator=(SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs)
-    	{
-    	    SmartPtr temp(rhs);
-    	    temp.Swap(*this);
-    	    return *this;
-    	}
-    	
-    	void Swap(SmartPtr& rhs)
-    	{
-    	    OP::Swap(rhs);
-    	    CP::Swap(rhs);
-    	    KP::Swap(rhs);
-    	    SP::Swap(rhs);
-    	}
-    	
-    	~SmartPtr()
-    	{
-    	    if (OP::Release(GetImpl(*static_cast<SP*>(this))))
-    	    {
-    	        SP::Destroy();
-    	    }
-    	}
-    	
-    	friend inline void Release(SmartPtr& sp, typename SP::StoredType& p)
-    	{
-    	    p = GetImplRef(sp);
-    	    GetImplRef(sp) = SP::Default();
-    	}
-    	
-    	friend inline void Reset(SmartPtr& sp, typename SP::StoredType p)
-    	{ SmartPtr(p).Swap(sp); }
+        SmartPtr& operator=(SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs)
+        {
+            SmartPtr temp(rhs);
+            temp.Swap(*this);
+            return *this;
+        }
+        
+        void Swap(SmartPtr& rhs)
+        {
+            OP::Swap(rhs);
+            CP::Swap(rhs);
+            KP::Swap(rhs);
+            SP::Swap(rhs);
+        }
+        
+        ~SmartPtr()
+        {
+            if (OP::Release(GetImpl(*static_cast<SP*>(this))))
+            {
+                SP::Destroy();
+            }
+        }
+        
+        friend inline void Release(SmartPtr& sp, typename SP::StoredType& p)
+        {
+            p = GetImplRef(sp);
+            GetImplRef(sp) = SP::Default();
+        }
+        
+        friend inline void Reset(SmartPtr& sp, typename SP::StoredType p)
+        { SmartPtr(p).Swap(sp); }
 
         PointerType operator->()
         {
@@ -899,31 +916,16 @@ namespace Loki
             KP::OnDereference(GetImplRef(*this));
             return SP::operator*();
         }
-    	
+        
         ReferenceType operator*() const
         {
             KP::OnDereference(GetImplRef(*this));
             return SP::operator*();
         }
-    	
+        
         bool operator!() const // Enables "if (!sp) ..."
         { return GetImpl(*this) == 0; }
         
-        inline friend bool operator==(const SmartPtr& lhs,
-            const T* rhs)
-        { return GetImpl(lhs) == rhs; }
-        
-        inline friend bool operator==(const T* lhs,
-            const SmartPtr& rhs)
-        { return rhs == lhs; }
-        
-        inline friend bool operator!=(const SmartPtr& lhs,
-            const T* rhs)
-        { return !(lhs == rhs); }
-        
-        inline friend bool operator!=(const T* lhs,
-            const SmartPtr& rhs)
-        { return rhs != lhs; }
 
         // Ambiguity buster
         template
@@ -935,7 +937,7 @@ namespace Loki
             template <class> class SP1
         >
         bool operator==(const SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs) const
-        { return *this == GetImpl(rhs); }
+        { return GetImpl(*this) == GetImpl(rhs); }
 
         // Ambiguity buster
         template
@@ -959,24 +961,26 @@ namespace Loki
             template <class> class SP1
         >
         bool operator<(const SmartPtr<T1, OP1, CP1, KP1, SP1>& rhs) const
-        { return *this < GetImpl(rhs); }
+        { return GetImpl(*this) < GetImpl(rhs); }
 
     private:
         // Helper for enabling 'if (sp)'
         struct Tester
         {
-            Tester() {}
-        private:
-            void operator delete(void*);
+            Tester(int) {}
+            void dummy() {}
         };
         
+        typedef void (Tester::*unspecified_boolean_type_)();
+
+        typedef typename Select<CP::allow, Tester, unspecified_boolean_type_>::Result
+            unspecified_boolean_type;
+
     public:
         // enable 'if (sp)'
-        operator Tester*() const
+        operator unspecified_boolean_type() const
         {
-            if (!*this) return 0;
-            static Tester t;
-            return &t;
+            return !*this ? 0 : &Tester::dummy;
         }
 
     private:
@@ -1012,7 +1016,7 @@ namespace Loki
         typename U
     >
     inline bool operator==(const SmartPtr<T, OP, CP, KP, SP>& lhs,
-        const U* rhs)
+        U* rhs)
     { return GetImpl(lhs) == rhs; }
     
 ////////////////////////////////////////////////////////////////////////////////
@@ -1028,7 +1032,7 @@ namespace Loki
         template <class> class SP,
         typename U
     >
-    inline bool operator==(const U* lhs,
+    inline bool operator==(U* lhs,
         const SmartPtr<T, OP, CP, KP, SP>& rhs)
     { return rhs == lhs; }
 
@@ -1046,7 +1050,7 @@ namespace Loki
         typename U
     >
     inline bool operator!=(const SmartPtr<T, OP, CP, KP, SP>& lhs,
-        const U* rhs)
+        U* rhs)
     { return !(lhs == rhs); }
     
 ////////////////////////////////////////////////////////////////////////////////
@@ -1062,7 +1066,7 @@ namespace Loki
         template <class> class SP,
         typename U
     >
-    inline bool operator!=(const U* lhs,
+    inline bool operator!=(U* lhs,
         const SmartPtr<T, OP, CP, KP, SP>& rhs)
     { return rhs != lhs; }
 
@@ -1080,7 +1084,7 @@ namespace Loki
         typename U
     >
     inline bool operator<(const SmartPtr<T, OP, CP, KP, SP>& lhs,
-        const U* rhs);
+        U* rhs);
         
 ////////////////////////////////////////////////////////////////////////////////
 // operator< for lhs = raw pointer, rhs = SmartPtr -- NOT DEFINED
@@ -1095,7 +1099,7 @@ namespace Loki
         template <class> class SP,
         typename U
     >
-    inline bool operator<(const U* lhs,
+    inline bool operator<(U* lhs,
         const SmartPtr<T, OP, CP, KP, SP>& rhs);
         
 ////////////////////////////////////////////////////////////////////////////////
@@ -1112,7 +1116,7 @@ namespace Loki
         typename U
     >
     inline bool operator>(const SmartPtr<T, OP, CP, KP, SP>& lhs,
-        const U* rhs)
+        U* rhs)
     { return rhs < lhs; }
         
 ////////////////////////////////////////////////////////////////////////////////
@@ -1128,7 +1132,7 @@ namespace Loki
         template <class> class SP,
         typename U
     >
-    inline bool operator>(const U* lhs,
+    inline bool operator>(U* lhs,
         const SmartPtr<T, OP, CP, KP, SP>& rhs)
     { return rhs < lhs; }
   
@@ -1146,7 +1150,7 @@ namespace Loki
         typename U
     >
     inline bool operator<=(const SmartPtr<T, OP, CP, KP, SP>& lhs,
-        const U* rhs)
+        U* rhs)
     { return !(rhs < lhs); }
         
 ////////////////////////////////////////////////////////////////////////////////
@@ -1162,7 +1166,7 @@ namespace Loki
         template <class> class SP,
         typename U
     >
-    inline bool operator<=(const U* lhs,
+    inline bool operator<=(U* lhs,
         const SmartPtr<T, OP, CP, KP, SP>& rhs)
     { return !(rhs < lhs); }
 
@@ -1180,7 +1184,7 @@ namespace Loki
         typename U
     >
     inline bool operator>=(const SmartPtr<T, OP, CP, KP, SP>& lhs,
-        const U* rhs)
+        U* rhs)
     { return !(lhs < rhs); }
         
 ////////////////////////////////////////////////////////////////////////////////
@@ -1196,7 +1200,7 @@ namespace Loki
         template <class> class SP,
         typename U
     >
-    inline bool operator>=(const U* lhs,
+    inline bool operator>=(U* lhs,
         const SmartPtr<T, OP, CP, KP, SP>& rhs)
     { return !(lhs < rhs); }
 
@@ -1231,6 +1235,14 @@ namespace std
 // June 20,     2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
 // December 09, 2001: Included <cassert>
 // February 2,  2003: fixed dependent names - credit due to Rani Sharoni
+// August   21, 2003: Added support for policy based explicit/implicit constructor.
+//  The new code will be effective if a macro named 
+//  *** LOKI_SMARTPTR_CONVERSION_CONSTRUCTOR_POLICY ***
+//  is defined (due to backward computability concerns).
+//  In case that the macro is defined and the conversion policy allow flag is off 
+//  (e.g. DisallowConversion) then the conversion from the "pointer" to the 
+//  SmartPtr must be explicit.
+
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif // SMARTPTR_INC_
