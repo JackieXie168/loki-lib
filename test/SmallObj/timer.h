@@ -12,7 +12,7 @@
 #ifndef LOKI_TEST_TIMER_H
 #define LOKI_TEST_TIMER_H
 
-// $Id: timer.h 823 2007-05-08 10:48:40Z lfittl $
+// $Id: timer.h 1185 2013-06-23 01:14:58Z rich_sposato $
 
 
 #include <ctime>
@@ -38,8 +38,8 @@ public:
     {
         t1 = clock();
     }
-    
-    int t()
+
+    clock_t t()
     {
         return t1-t0;
     }
@@ -67,8 +67,8 @@ public:
         std::cout << s << "\tseconds: " << sec(t) << "\trelative time: " << rel(t) << "%\tspeed-up factor: " << speedup(t) << "" << std::endl;
     }
 private:
-    int t0;
-    int t1;
+    clock_t t0;
+    clock_t t1;
 };
 
 #endif

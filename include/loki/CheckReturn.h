@@ -1,13 +1,26 @@
 ////////////////////////////////////////////////////////////////////////////////
 // The Loki Library
 // Copyright (c) 2007 by Rich Sposato
-// Permission to use, copy, modify, distribute and sell this software for any
-//     purpose is hereby granted without fee, provided that the above copyright
-//     notice appear in all copies and that both that copyright notice and this
-//     permission notice appear in supporting documentation.
-// The author makes no representations about the
-//     suitability of this software for any purpose. It is provided "as is"
-//     without express or implied warranty.
+//
+// Code covered by the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef LOKI_CHECK_RETURN_INC_
@@ -109,13 +122,13 @@ struct FprintfStderr
 
 
 
-template < class Value , template<class> class OnError = TriggerAssert >
+template < class ValueType , template<class> class OnError = TriggerAssert >
 class CheckReturn
 {
 public:
 
 	/// Conversion constructor changes Value type to CheckReturn type.
-	inline CheckReturn( const Value & value ) :
+	inline CheckReturn( const ValueType & value ) :
 		m_value( value ), m_checked( false ) {}
 
 	/// Copy-constructor allows functions to call another function within the
@@ -131,11 +144,11 @@ public:
 		// If m_checked is false, then a function failed to check the
 		// return value from a function call.
 		if (!m_checked)
-			OnError<Value>::run(m_value);
+			OnError< ValueType >::run(m_value);
 	}
 
 	/// Conversion operator changes CheckReturn back to Value type.
-	inline operator Value ( void )
+	inline operator ValueType ( void )
 	{
 		m_checked = true;
 		return m_value;
@@ -149,7 +162,7 @@ private:
 	CheckReturn & operator = ( const CheckReturn & that );
 
 	/// Copy of returned value.
-	Value m_value;
+	ValueType m_value;
 
 	/// Flag for whether calling function checked return value yet.
 	mutable bool m_checked;

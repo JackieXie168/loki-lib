@@ -2,20 +2,37 @@
 // The Loki Library
 // Data Generator by Shannon Barber
 // This code DOES NOT accompany the book:
-// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design 
+// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design
 //     Patterns Applied". Copyright (c) 2001. Addison-Wesley.
 //
-// Code covered by the MIT License
-// The author makes no representations about the suitability of this software
-//  for any purpose. It is provided "as is" without express or implied warranty.
+// Code covered by the MIT License:
+// Copyright(c) 2010 Shannon Barber
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 #ifndef LOKI_DATAGENERATORS_INC_
 #define LOKI_DATAGENERATORS_INC_
 
-// $Id: DataGenerators.h 751 2006-10-17 19:50:37Z syntheticpp $
+// $Id: DataGenerators.h 1115 2011-09-23 00:46:21Z rich_sposato $
 
 
-#include "Typelist.h"
+#include <loki/Typelist.h>
 
 //Reference version
 
@@ -64,7 +81,7 @@ namespace Loki
             };
     template <class TList, template <class> class GenFunc>
     struct IterateTypes;
-     
+
     template <class T1, class T2, template <class> class GenFunc>
     struct IterateTypes<Typelist<T1, T2>, GenFunc>
     {
@@ -79,7 +96,7 @@ namespace Loki
         tail.operator()(ii);
         }
     };
-     
+
     template <class AtomicType, template <class> class GenFunc>
     struct IterateTypes
     {
@@ -91,7 +108,7 @@ namespace Loki
         ++ii; //Is this even needed?
         }
     };
-    
+
     template <template <class> class GenFunc>
     struct IterateTypes<NullType, GenFunc>
     {
@@ -99,7 +116,7 @@ namespace Loki
     void operator()(II ii)
         {}
     };
-    
+
     template<typename Types, template <class> class UnitFunc, typename II>
     void iterate_types(II ii)
         {

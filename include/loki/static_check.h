@@ -2,20 +2,32 @@
 // The Loki Library
 // Copyright (c) 2001 by Andrei Alexandrescu
 // This code accompanies the book:
-// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design 
+// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design
 //     Patterns Applied". Copyright (c) 2001. Addison-Wesley.
-// Permission to use, copy, modify, distribute and sell this software for any 
-//     purpose is hereby granted without fee, provided that the above copyright 
-//     notice appear in all copies and that both that copyright notice and this 
-//     permission notice appear in supporting documentation.
-// The author or Addison-Wesley Longman make no representations about the 
-//     suitability of this software for any purpose. It is provided "as is" 
-//     without express or implied warranty.
+// Code covered by the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 #ifndef LOKI_STATIC_CHECK_INC_
 #define LOKI_STATIC_CHECK_INC_
 
-// $Id: static_check.h 752 2006-10-17 19:52:18Z syntheticpp $
+// $Id: static_check.h 1115 2011-09-23 00:46:21Z rich_sposato $
 
 
 namespace Loki
@@ -29,16 +41,18 @@ namespace Loki
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// macro STATIC_CHECK
-// Invocation: STATIC_CHECK(expr, id)
+// macro LOKI_STATIC_CHECK
+// Invocation: LOKI_STATIC_CHECK(expr, id)
 // where:
 // expr is a compile-time integral or pointer expression
 // id is a C++ identifier that does not need to be defined
 // If expr is zero, id will appear in a compile-time error message.
 ////////////////////////////////////////////////////////////////////////////////
 
-#define LOKI_STATIC_CHECK(expr, msg) \
-    { Loki::CompileTimeError<((expr) != 0)> ERROR_##msg; (void)ERROR_##msg; } 
+#define LOKI_CONCAT( X, Y ) LOKI_CONCAT_SUB( X, Y )
+#define LOKI_CONCAT_SUB( X, Y ) X##Y
+
+#define LOKI_STATIC_CHECK(expr, msg) enum { LOKI_CONCAT(ERROR_##msg, __LINE__) = sizeof(Loki::CompileTimeError<expr != 0 >) }
 
 
 #endif // end file guardian

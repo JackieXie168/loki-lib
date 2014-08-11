@@ -2,24 +2,36 @@
 // The Loki Library
 // Copyright (c) 2001 by Andrei Alexandrescu
 // This code accompanies the book:
-// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design 
+// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design
 //     Patterns Applied". Copyright (c) 2001. Addison-Wesley.
-// Permission to use, copy, modify, distribute and sell this software for any 
-//     purpose is hereby granted without fee, provided that the above copyright 
-//     notice appear in all copies and that both that copyright notice and this 
-//     permission notice appear in supporting documentation.
-// The author or Addison-Wesley Longman make no representations about the 
-//     suitability of this software for any purpose. It is provided "as is" 
-//     without express or implied warranty.
+// Code covered by the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 #ifndef LOKI_SINGLETON_INC_
 #define LOKI_SINGLETON_INC_
 
-// $Id: Singleton.h 834 2007-08-02 19:36:10Z syntheticpp $
+// $Id: Singleton.h 1129 2011-10-03 04:39:17Z rich_sposato $
 
 
-#include "LokiExport.h"
-#include "Threads.h"
+#include <loki/LokiExport.h>
+#include <loki/Threads.h>
 #include <algorithm>
 #include <stdexcept>
 #include <cassert>
@@ -30,9 +42,9 @@
 #include <memory>
 
 #ifdef _MSC_VER
-#define LOKI_C_CALLING_CONVENTION_QUALIFIER __cdecl 
+#define LOKI_C_CALLING_CONVENTION_QUALIFIER __cdecl
 #else
-#define LOKI_C_CALLING_CONVENTION_QUALIFIER 
+#define LOKI_C_CALLING_CONVENTION_QUALIFIER
 #endif
 
 ///  \defgroup  SingletonGroup Singleton
@@ -42,7 +54,7 @@
 ///  \ingroup   SingletonGroup
 ///  The lifetimes of the singleton.
 ///  \par Special lifetime for SmallObjects
-///  When the holded object is a Small(Value)Object or the holded object 
+///  When the holded object is a Small(Value)Object or the holded object
 ///  uses objects which are or inherit from Small(Value)Object
 ///  then you can't use the default lifetime: you must use the lifetime
 ///  \code Loki::LongevityLifetime::DieAsSmallObjectChild \endcode
@@ -58,14 +70,14 @@ namespace Loki
     {
 
 #ifndef LOKI_MAKE_DLL
-        void LOKI_C_CALLING_CONVENTION_QUALIFIER AtExitFn(); // declaration needed below   
+        void LOKI_C_CALLING_CONVENTION_QUALIFIER AtExitFn(); // declaration needed below
 #else
         void LOKI_EXPORT AtExitFn();
 #endif
 
         class LifetimeTracker;
 
-#define LOKI_ENABLE_NEW_SETLONGLIVITY_HELPER_DATA_IMPL        
+#define LOKI_ENABLE_NEW_SETLONGLIVITY_HELPER_DATA_IMPL
 #ifdef LOKI_ENABLE_NEW_SETLONGLIVITY_HELPER_DATA_IMPL
 
         // Helper data
@@ -87,23 +99,23 @@ namespace Loki
         class LifetimeTracker
         {
         public:
-            LifetimeTracker(unsigned int x) : longevity_(x) 
+            LifetimeTracker(unsigned int x) : longevity_(x)
             {}
-            
+
             virtual ~LifetimeTracker() = 0;
-            
+
             static bool Compare(const LifetimeTracker* lhs,
                 const LifetimeTracker* rhs)
             {
                 return lhs->longevity_ > rhs->longevity_;
             }
-            
+
         private:
             unsigned int longevity_;
         };
-        
+
         // Definition required
-        inline LifetimeTracker::~LifetimeTracker() {} 
+        inline LifetimeTracker::~LifetimeTracker() {}
 
         // Helper destroyer function
         template <typename T>
@@ -124,11 +136,13 @@ namespace Loki
                 , pTracked_(p)
                 , destroyer_(d)
             {}
-            
+
             ~ConcreteLifetimeTracker()
             { destroyer_(pTracked_); }
-            
+
         private:
+            /// Copy constructor is not implemented.
+            ConcreteLifetimeTracker( const ConcreteLifetimeTracker & );
             T* pTracked_;
             Destroyer destroyer_;
         };
@@ -137,8 +151,8 @@ namespace Loki
 
     ////////////////////////////////////////////////////////////////////////////////
     ///  \ingroup LifetimeGroup
-    ///  
-    ///  Assigns an object a longevity; ensures ordered destructions of objects 
+    ///
+    ///  Assigns an object a longevity; ensures ordered destructions of objects
     ///  registered thusly during the exit sequence of the application
     ////////////////////////////////////////////////////////////////////////////////
 
@@ -155,58 +169,58 @@ namespace Loki
             pTrackerArray = new TrackerArray;
 
         // automatically delete the ConcreteLifetimeTracker object when a exception is thrown
-        std::auto_ptr<LifetimeTracker> 
+        std::auto_ptr<LifetimeTracker>
             p( new ConcreteLifetimeTracker<T, Destroyer>(pDynObject, longevity, d) );
 
         // Find correct position
         TrackerArray::iterator pos = std::upper_bound(
-            pTrackerArray->begin(), 
-            pTrackerArray->end(), 
-            p.get(), 
+            pTrackerArray->begin(),
+            pTrackerArray->end(),
+            p.get(),
             LifetimeTracker::Compare);
-        
+
         // Insert the pointer to the ConcreteLifetimeTracker object into the queue
         pTrackerArray->insert(pos, p.get());
-        
+
         // nothing has thrown: don't delete the ConcreteLifetimeTracker object
         p.release();
-        
+
         // Register a call to AtExitFn
         std::atexit(Private::AtExitFn);
     }
 
 #else
-    
+
     template <typename T, typename Destroyer>
     void SetLongevity(T* pDynObject, unsigned int longevity,
         Destroyer d)
     {
         using namespace Private;
-        
+
         TrackerArray pNewArray = static_cast<TrackerArray>(
-                std::realloc(pTrackerArray, 
+                std::realloc(pTrackerArray,
                     sizeof(*pTrackerArray) * (elements + 1)));
         if (!pNewArray) throw std::bad_alloc();
-        
+
         // Delayed assignment for exception safety
         pTrackerArray = pNewArray;
-        
+
         LifetimeTracker* p = new ConcreteLifetimeTracker<T, Destroyer>(
             pDynObject, longevity, d);
- 
+
         // Insert a pointer to the object into the queue
         TrackerArray pos = std::upper_bound(
-            pTrackerArray, 
-            pTrackerArray + elements, 
-            p, 
+            pTrackerArray,
+            pTrackerArray + elements,
+            p,
             LifetimeTracker::Compare);
         std::copy_backward(
-            pos, 
+            pos,
             pTrackerArray + elements,
             pTrackerArray + elements + 1);
         *pos = p;
         ++elements;
-        
+
         // Register a call to AtExitFn
         std::atexit(Private::AtExitFn);
     }
@@ -221,21 +235,21 @@ namespace Loki
     }
 
     ////////////////////////////////////////////////////////////////////////////////
-    ///  \struct CreateUsingNew 
+    ///  \struct CreateUsingNew
     ///
     ///  \ingroup CreationGroup
     ///  Implementation of the CreationPolicy used by SingletonHolder
-    ///  Creates objects using a straight call to the new operator 
+    ///  Creates objects using a straight call to the new operator
     ////////////////////////////////////////////////////////////////////////////////
     template <class T> struct CreateUsingNew
     {
         static T* Create()
         { return new T; }
-        
+
         static void Destroy(T* p)
         { delete p; }
     };
-    
+
     ////////////////////////////////////////////////////////////////////////////////
     ///  \struct CreateUsing
     ///
@@ -265,13 +279,13 @@ namespace Loki
             }
         };
     };
-    
+
     ////////////////////////////////////////////////////////////////////////////////
     ///  \struct CreateUsingMalloc
     ///
     ///  \ingroup CreationGroup
     ///  Implementation of the CreationPolicy used by SingletonHolder
-    ///  Creates objects using a call to std::malloc, followed by a call to the 
+    ///  Creates objects using a call to std::malloc, followed by a call to the
     ///  placement new operator
     ////////////////////////////////////////////////////////////////////////////////
     template <class T> struct CreateUsingMalloc
@@ -282,14 +296,14 @@ namespace Loki
             if (!p) return 0;
             return new(p) T;
         }
-        
+
         static void Destroy(T* p)
         {
             p->~T();
             std::free(p);
         }
     };
-    
+
 
     ////////////////////////////////////////////////////////////////////////////////
     ///  \struct CreateStatic
@@ -297,15 +311,15 @@ namespace Loki
     ///  \ingroup CreationGroup
     ///  Implementation of the CreationPolicy used by SingletonHolder
     ///  Creates an object in static memory
-    ///  Implementation is slightly nonportable because it uses the MaxAlign trick 
-    ///  (an union of all types to ensure proper memory alignment). This trick is 
+    ///  Implementation is slightly nonportable because it uses the MaxAlign trick
+    ///  (an union of all types to ensure proper memory alignment). This trick is
     ///  nonportable in theory but highly portable in practice.
     ////////////////////////////////////////////////////////////////////////////////
     template <class T> struct CreateStatic
     {
-        
+
 #ifdef _MSC_VER
-#pragma warning( push ) 
+#pragma warning( push )
 #pragma warning( disable : 4121 )
 // alignment of a member was sensitive to packing
 #endif // _MSC_VER
@@ -323,17 +337,17 @@ namespace Loki
             int Test::* pMember_;
             int (Test::*pMemberFn_)(int);
         };
-        
+
 #ifdef _MSC_VER
 #pragma warning( pop )
 #endif // _MSC_VER
-        
+
         static T* Create()
         {
             static MaxAlign staticMemory_;
             return new(&staticMemory_) T;
         }
-        
+
         static void Destroy(T* p)
         {
             p->~T();
@@ -353,7 +367,7 @@ namespace Loki
     {
         static void ScheduleDestruction(T*, atexit_pfn_t pFun)
         { std::atexit(pFun); }
-        
+
         static void OnDeadReference()
         { throw std::logic_error("Dead Reference Detected"); }
     };
@@ -363,7 +377,7 @@ namespace Loki
     ///
     ///  \ingroup LifetimeGroup
     ///  Implementation of the LifetimePolicy used by SingletonHolder
-    ///  Schedules an object's destruction as per C++ rules, and it allows object 
+    ///  Schedules an object's destruction as per C++ rules, and it allows object
     ///  recreation by not throwing an exception from OnDeadReference
     ////////////////////////////////////////////////////////////////////////////////
     template <class T>
@@ -377,20 +391,20 @@ namespace Loki
 #endif
                 std::atexit(pFun);
         }
-        
+
         static void OnDeadReference()
         {
 #ifndef ATEXIT_FIXED
             destroyedOnce_ = true;
 #endif
         }
-        
+
     private:
 #ifndef ATEXIT_FIXED
         static bool destroyedOnce_;
 #endif
     };
-    
+
 #ifndef ATEXIT_FIXED
     template <class T> bool PhoenixSingleton<T>::destroyedOnce_ = false;
 #endif
@@ -402,13 +416,13 @@ namespace Loki
     ///
     ///  \ingroup LifetimeGroup
     ///
-    ///  A DeletableSingleton allows the instantiated singleton to be 
-    ///  destroyed at any time. The singleton can be reinstantiated at 
+    ///  A DeletableSingleton allows the instantiated singleton to be
+    ///  destroyed at any time. The singleton can be reinstantiated at
     ///  any time, even during program termination.
-    ///  If the singleton exists when the program terminates, it will 
+    ///  If the singleton exists when the program terminates, it will
     ///  be automatically deleted.
     ///
-    ///  \par Usage:  
+    ///  \par Usage:
     ///  The singleton can be deleted manually:
     ///
     ///  DeletableSingleton<MyClass>::GracefulDelete();
@@ -430,9 +444,9 @@ namespace Loki
                 needCallback = false;
             }
         }
-    
+
         static void OnDeadReference()
-        { 
+        {
         }
         ///  delete singleton object manually
         static void GracefulDelete()
@@ -442,12 +456,12 @@ namespace Loki
             isDead = true;
             deleter();
         }
-    
+
     protected:
         static atexit_pfn_t deleter;
         static bool isDead;
         static bool needCallback;
-        
+
         static void atexitCallback()
         {
 #ifdef ATEXIT_FIXED
@@ -458,13 +472,13 @@ namespace Loki
             GracefulDelete();
         }
     };
-    
+
     template <class T>
     atexit_pfn_t DeletableSingleton<T>::deleter = 0;
-    
+
     template <class T>
     bool DeletableSingleton<T>::isDead = true;
-    
+
     template <class T>
     bool DeletableSingleton<T>::needCallback = true;
 
@@ -501,7 +515,7 @@ namespace Loki
             Private::Adapter<T> adapter = { pFun };
             SetLongevity(pObj, GetLongevity(pObj), adapter);
         }
-        
+
         static void OnDeadReference()
         { throw std::logic_error("Dead Reference Detected"); }
     };
@@ -518,11 +532,11 @@ namespace Loki
     {
         static void ScheduleDestruction(T*, atexit_pfn_t)
         {}
-        
+
         static void OnDeadReference()
         {}
     };
-    
+
 
     ////////////////////////////////////////////////////////////////////////////////
     ///  \defgroup LongevityLifetimeGroup LongevityLifetime
@@ -537,7 +551,7 @@ namespace Loki
     namespace LongevityLifetime
     {
         ////////////////////////////////////////////////////////////////////////////////
-        ///  \struct  SingletonFixedLongevity 
+        ///  \struct  SingletonFixedLongevity
         ///
         ///  \ingroup LongevityLifetimeGroup
         ///  Add your own lifetimes into the namespace 'LongevityLifetime'
@@ -551,13 +565,13 @@ namespace Loki
         {
         public:
             virtual ~SingletonFixedLongevity() {}
-            
+
             static void ScheduleDestruction(T* pObj, atexit_pfn_t pFun)
             {
                 Private::Adapter<T> adapter = { pFun };
                 SetLongevity(pObj, Longevity , adapter);
             }
-            
+
             static void OnDeadReference()
             { throw std::logic_error("Dead Reference Detected"); }
         };
@@ -578,11 +592,11 @@ namespace Loki
 
         ///  \struct DieFirst
         ///  \ingroup LongevityLifetimeGroup
-        ///  \brief  Shortest possible SingletonWithLongevity lifetime: 0 
+        ///  \brief  Shortest possible SingletonWithLongevity lifetime: 0
         template <class T>
         struct DieFirst : SingletonFixedLongevity<0,T>
         {};
-    
+
     }//namespace LongevityLifetime
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -590,12 +604,12 @@ namespace Loki
     ///
     ///  \ingroup LifetimeGroup
     ///
-    ///  Lifetime policyfor the SingletonHolder tempalte. 
+    ///  Lifetime policyfor the SingletonHolder tempalte.
     ///  Followers will die after the master dies Followers will not die, if
     ///    - master never dies (NoDestroy policy)
     ///    - master never created
     ///    - master dies not in the function registered with atexit
-    ///    - master dies not by a call of a the atexit registerd function (DeletableSingleton::GracefulDelete)         
+    ///    - master dies not by a call of a the atexit registerd function (DeletableSingleton::GracefulDelete)
     ///
     ///  \par Usage:
     ///
@@ -611,7 +625,7 @@ namespace Loki
             typedef std::vector<atexit_pfn_t> Container;
             typedef typename Container::iterator iterator;
             static Container* followers_;
-        
+
         public:
             static void Init()
             {
@@ -633,7 +647,7 @@ namespace Loki
             {
                 Init();
                 for(iterator it = followers_->begin();it != followers_->end();++it)
-                    (*it)();    
+                    (*it)();
                 delete followers_;
             }
         };
@@ -641,7 +655,7 @@ namespace Loki
     public:
 
         ///  \struct With
-        ///  Template for the master 
+        ///  Template for the master
         ///  \param Lifetime Lifetime policy for the master
         template<template <class> class Lifetime>
         struct With
@@ -656,7 +670,7 @@ namespace Loki
                     Followers<Master>::Init();
                     Lifetime<Master>::ScheduleDestruction(pObj, pFun);
 
-                    // use same policy for the followers and force a new 
+                    // use same policy for the followers and force a new
                     // template instantiation,  this adds a additional atexit entry
                     // does not work with SetLonlevity, but there you can control
                     // the lifetime with the GetLongevity function.
@@ -664,8 +678,8 @@ namespace Loki
                 }
 
                 static void OnDeadReference()
-                { 
-                    throw std::logic_error("Dead Reference Detected"); 
+                {
+                    throw std::logic_error("Dead Reference Detected");
                 }
             };
         };
@@ -677,7 +691,7 @@ namespace Loki
         struct AfterMaster
         {
             ///  \struct IsDestroyed
-            ///  Policy for followers 
+            ///  Policy for followers
             template<class F>
             struct IsDestroyed
             {
@@ -685,33 +699,33 @@ namespace Loki
                 {
                     Followers<Master>::AddFollower(pFun);
                 }
-      
+
                 static void OnDeadReference()
-                { 
-                    throw std::logic_error("Dead Reference Detected"); 
+                {
+                    throw std::logic_error("Dead Reference Detected");
                 }
             };
         };
     };
 
     template<class T>
-    typename FollowIntoDeath::Followers<T>::Container* 
+    typename FollowIntoDeath::Followers<T>::Container*
     FollowIntoDeath::Followers<T>::followers_ = 0;
-    
-    
-    
+
+
+
     ////////////////////////////////////////////////////////////////////////////////
     ///  \class  SingletonHolder
     ///
     ///  \ingroup SingletonGroup
     ///
     ///  Provides Singleton amenities for a type T
-    ///  To protect that type from spurious instantiations, 
+    ///  To protect that type from spurious instantiations,
     ///  you have to protect it yourself.
-    ///  
+    ///
     ///  \param CreationPolicy Creation policy, default: CreateUsingNew
     ///  \param LifetimePolicy Lifetime policy, default: DefaultLifetime,
-    ///  \param ThreadingModel Threading policy, 
+    ///  \param ThreadingModel Threading policy,
     ///                         default: LOKI_DEFAULT_THREADING_NO_OBJ_LEVEL
     ////////////////////////////////////////////////////////////////////////////////
     template
@@ -731,21 +745,21 @@ namespace Loki
 
         ///  Returns a reference to singleton object
         static T& Instance();
-        
+
     private:
         // Helpers
         static void MakeInstance();
         static void LOKI_C_CALLING_CONVENTION_QUALIFIER DestroySingleton();
-        
+
         // Protection
         SingletonHolder();
-        
+
         // Data
         typedef typename ThreadingModel<T*,MutexPolicy>::VolatileType PtrInstanceType;
         static PtrInstanceType pInstance_;
         static bool destroyed_;
     };
-    
+
     ////////////////////////////////////////////////////////////////////////////////
     // SingletonHolder's data
     ////////////////////////////////////////////////////////////////////////////////
@@ -783,7 +797,7 @@ namespace Loki
         template <class, class> class ThreadingModel,
         class MutexPolicy
     >
-    inline T& SingletonHolder<T, CreationPolicy, 
+    inline T& SingletonHolder<T, CreationPolicy,
         LifetimePolicy, ThreadingModel, MutexPolicy>::Instance()
     {
         if (!pInstance_)
@@ -805,12 +819,12 @@ namespace Loki
         template <class, class> class ThreadingModel,
         class MutexPolicy
     >
-    void SingletonHolder<T, CreationPolicy, 
+    void SingletonHolder<T, CreationPolicy,
         LifetimePolicy, ThreadingModel, MutexPolicy>::MakeInstance()
     {
         typename ThreadingModel<SingletonHolder,MutexPolicy>::Lock guard;
         (void)guard;
-        
+
         if (!pInstance_)
         {
             if (destroyed_)
@@ -819,7 +833,7 @@ namespace Loki
                 LifetimePolicy<T>::OnDeadReference();
             }
             pInstance_ = CreationPolicy<T>::Create();
-            LifetimePolicy<T>::ScheduleDestruction(pInstance_, 
+            LifetimePolicy<T>::ScheduleDestruction(pInstance_,
                 &DestroySingleton);
         }
     }
@@ -832,7 +846,7 @@ namespace Loki
         template <class, class> class M,
         class X
     >
-    void LOKI_C_CALLING_CONVENTION_QUALIFIER 
+    void LOKI_C_CALLING_CONVENTION_QUALIFIER
     SingletonHolder<T, CreationPolicy, L, M, X>::DestroySingleton()
     {
         assert(!destroyed_);
@@ -849,7 +863,7 @@ namespace Loki
     ///
     ///  Convenience template to implement a getter function for a singleton object.
     ///  Often needed in a shared library which hosts singletons.
-    ///  
+    ///
     ///  \par Usage
     ///
     ///  see test/SingletonDll

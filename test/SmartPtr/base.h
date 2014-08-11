@@ -1,16 +1,16 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Test program for The Loki Library
 // Copyright (c) 2006 Richard Sposato
-// Permission to use, copy, modify, distribute and sell this software for any 
-//     purpose is hereby granted without fee, provided that the above copyright 
-//     notice appear in all copies and that both that copyright notice and this 
+// Permission to use, copy, modify, distribute and sell this software for any
+//     purpose is hereby granted without fee, provided that the above copyright
+//     notice appear in all copies and that both that copyright notice and this
 //     permission notice appear in supporting documentation.
-// The authors make no representations about the 
-//     suitability of this software for any purpose. It is provided "as is" 
+// The authors make no representations about the
+//     suitability of this software for any purpose. It is provided "as is"
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: base.h 761 2006-10-17 20:48:18Z syntheticpp $
+// $Id: base.h 1113 2011-09-20 23:32:29Z rich_sposato $
 
 #include <assert.h>
 
@@ -20,7 +20,7 @@
 class BaseClass
 {
 public:
-    BaseClass( void )
+    BaseClass( void ) : m_refCount( 1 )
     {
         s_constructions++;
     }
@@ -31,8 +31,14 @@ public:
     }
 
     // These 2 functions are so we can pretend we have a COM object.
-    void AddRef( void ) {}
-    void Release( void ) {}
+    void AddRef( void ) { ++m_refCount; }
+    void Release( void )
+    {
+        assert( 0 < m_refCount );
+        --m_refCount;
+        if ( 0 == m_refCount )
+            delete this; // Don't even ask me how much I dislike seeing "delete this;"!
+    }
 
     // This function is used only for the DeepCopy policy.
     virtual BaseClass * Clone( void ) const
@@ -67,14 +73,17 @@ public:
         return s_destructions;
     }
 
+protected:
+    BaseClass( const BaseClass & that ) : m_refCount( that.m_refCount ) {}
+
 private:
-    /// Not implemented.
-    BaseClass( const BaseClass & );
     /// Not implemented.
     BaseClass & operator = ( const BaseClass & );
 
     static unsigned int s_constructions;
     static unsigned int s_destructions;
+
+    unsigned int m_refCount;
 };
 
 
@@ -100,6 +109,44 @@ public:
     {
         return new PrivateSubClass;
     }
+};
+
+// ----------------------------------------------------------------------------
+
+/** @class Feline - The feline family of classes are to test dynamic_cast. Also used to test
+ pointers to arrays of objects.
+ */
+class Feline : public BaseClass
+{
+public:
+    virtual ~Feline() {}
+    virtual Feline * Clone( void ) const = 0;
+};
+
+class Lion : public Feline
+{
+public:
+    virtual ~Lion() {}
+    virtual Lion * Clone( void ) const { return new Lion( *this ); }
+};
+
+class Tiger : public Feline
+{
+public:
+    Tiger( void ) : m_stripes( 100 ) {}
+    virtual ~Tiger() {}
+    virtual Tiger * Clone( void ) const { return new Tiger( *this ); }
+    unsigned int GetStripes( void ) const { return m_stripes; }
+    void SetStripes( unsigned int s ) { m_stripes = s; }
+private:
+    unsigned int m_stripes;
+};
+
+class Dog
+{
+public:
+    virtual ~Dog() {}
+    virtual Dog * Clone( void ) const { return new Dog( *this ); }
 };
 
 

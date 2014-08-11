@@ -4,18 +4,30 @@
 // This code accompanies the book:
 // Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design
 //     Patterns Applied". Copyright (c) 2001. Addison-Wesley.
-// Permission to use, copy, modify, distribute and sell this software for any
-//     purpose is hereby granted without fee, provided that the above copyright
-//     notice appear in all copies and that both that copyright notice and this
-//     permission notice appear in supporting documentation.
-// The author or Addison-Wesley Longman make no representations about the
-//     suitability of this software for any purpose. It is provided "as is"
-//     without express or implied warranty.
+// Code covered by the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 #ifndef LOKI_THREADS_INC_
 #define LOKI_THREADS_INC_
 
-// $Id: Threads.h 902 2008-11-10 05:47:06Z rich_sposato $
+// $Id: Threads.h 1115 2011-09-23 00:46:21Z rich_sposato $
 
 
 ///  @defgroup  ThreadingGroup Threading
@@ -52,7 +64,7 @@
 
 #include <cassert>
 
-#if defined(LOKI_CLASS_LEVEL_THREADING) || defined(LOKI_OBJECT_LEVEL_THREADING)
+#if defined( LOKI_CLASS_LEVEL_THREADING ) || defined( LOKI_OBJECT_LEVEL_THREADING )
 
     #define LOKI_DEFAULT_THREADING_NO_OBJ_LEVEL ::Loki::ClassLevelLockable
 
@@ -77,11 +89,11 @@
 
 #endif
 
-#ifndef LOKI_DEFAULT_MUTEX
-#define LOKI_DEFAULT_MUTEX ::Loki::Mutex
+#if !defined( LOKI_DEFAULT_MUTEX )
+    #define LOKI_DEFAULT_MUTEX ::Loki::Mutex
 #endif
 
-#ifdef LOKI_WINDOWS_H
+#if defined( LOKI_WINDOWS_H )
 
 #define LOKI_THREADS_MUTEX(x)           CRITICAL_SECTION (x);
 #define LOKI_THREADS_MUTEX_INIT(x)      ::InitializeCriticalSection (x)
@@ -92,6 +104,9 @@
 #define LOKI_THREADS_MUTEX_CTOR(x)
 
 #define LOKI_THREADS_ATOMIC_FUNCTIONS                                   \
+    private:                                                            \
+        static CRITICAL_SECTION atomic_mutex_;                          \
+    public:                                                             \
         static IntType AtomicMultiply(volatile IntType& lval, const IntType val) \
         {                                                               \
             ::EnterCriticalSection( &atomic_mutex_ );                   \
@@ -124,11 +139,17 @@
             return lval;                                                \
         }                                                               \
                                                                         \
-        static void AtomicAssign(volatile IntType& lval, const IntType val)   \
-        { InterlockedExchange(&const_cast<IntType&>(lval), val); }      \
+        static IntType AtomicAssign(volatile IntType& lval, const IntType val)   \
+        {                                                               \
+            InterlockedExchange(&const_cast<IntType&>(lval), val);      \
+            return lval;                                                \
+        }                                                               \
                                                                         \
-        static void AtomicAssign(IntType& lval, volatile const IntType& val)  \
-        { InterlockedExchange(&lval, val); }                            \
+        static IntType AtomicAssign(IntType& lval, volatile const IntType& val)  \
+        {                                                               \
+            InterlockedExchange(&lval, val);                            \
+            return lval;                                                \
+        }                                                               \
                                                                         \
         static IntType AtomicIncrement(volatile IntType& lval, const IntType compare, bool & matches )  \
         {                                                               \
@@ -246,7 +267,7 @@
             return lval;                                                 \
         }                                                                \
                                                                          \
-        static void AtomicAssign(volatile IntType& lval, const IntType val) \
+        static IntType AtomicAssign(volatile IntType& lval, const IntType val) \
         {                                                                \
             ::pthread_mutex_lock( &atomic_mutex_ );                      \
             lval = val;                                                  \
@@ -254,7 +275,7 @@
             return lval;                                                 \
         }                                                                \
                                                                          \
-        static void AtomicAssign(IntType& lval, volatile const IntType& val) \
+        static IntType AtomicAssign(IntType& lval, volatile const IntType& val) \
         {                                                                \
             ::pthread_mutex_lock( &atomic_mutex_ );                      \
             lval = val;                                                  \
@@ -391,11 +412,17 @@ namespace Loki
         static IntType AtomicDecrement(volatile IntType& lval)
         { return --lval; }
 
-        static void AtomicAssign(volatile IntType & lval, const IntType val)
-        { lval = val; }
+        static IntType AtomicAssign(volatile IntType & lval, const IntType val)
+        {
+            lval = val;
+            return lval;
+        }
 
-        static void AtomicAssign(IntType & lval, volatile IntType & val)
-        { lval = val; }
+        static IntType AtomicAssign(IntType & lval, volatile IntType & val)
+        {
+            lval = val;
+            return lval;
+        }
 
         static IntType AtomicAdd(volatile IntType& lval, const IntType val, const IntType compare, bool & matches )
         {
@@ -523,6 +550,19 @@ namespace Loki
     {
         struct Initializer
         {
+
+            /// This function provides a Scott-Meyers type of Singleton as the initializer
+            /// for the shared mutex.
+            static Initializer & GetIt( void )
+            {
+                static Initializer initializer_;
+                return initializer_;
+            }
+
+            inline bool IsInit( void ) { return init_; }
+            inline MutexPolicy & GetMutex( void ) { return mtx_; }
+
+        private:
             bool init_;
             MutexPolicy mtx_;
 
@@ -535,9 +575,10 @@ namespace Loki
             {
                 assert(init_);
             }
-        };
 
-        static Initializer initializer_;
+            Initializer( const Initializer & );
+            Initializer & operator = ( const Initializer & );
+        };
 
     public:
 
@@ -553,29 +594,33 @@ namespace Loki
             /// Lock class
             Lock()
             {
-                assert(initializer_.init_);
-                initializer_.mtx_.Lock();
+                Initializer & initializer = Initializer::GetIt();
+                assert( initializer.IsInit() );
+                initializer.GetMutex().Lock();
             }
 
             /// Lock class
             explicit Lock(const ClassLevelLockable&)
             {
-                assert(initializer_.init_);
-                initializer_.mtx_.Lock();
+                Initializer & initializer = Initializer::GetIt();
+                assert( initializer.IsInit() );
+                initializer.GetMutex().Lock();
             }
 
             /// Lock class
             explicit Lock(const ClassLevelLockable*)
             {
-                assert(initializer_.init_);
-                initializer_.mtx_.Lock();
+                Initializer & initializer = Initializer::GetIt();
+                assert( initializer.IsInit() );
+                initializer.GetMutex().Lock();
             }
 
             /// Unlock class
             ~Lock()
             {
-                assert(initializer_.init_);
-                initializer_.mtx_.Unlock();
+                Initializer & initializer = Initializer::GetIt();
+                assert( initializer.IsInit() );
+                initializer.GetMutex().Unlock();
             }
 
         private:
@@ -595,10 +640,6 @@ namespace Loki
     template <class Host, class MutexPolicy>
     pthread_mutex_t ClassLevelLockable<Host, MutexPolicy>::atomic_mutex_ = PTHREAD_MUTEX_INITIALIZER;
 #endif
-
-    template < class Host, class MutexPolicy >
-    typename ClassLevelLockable< Host, MutexPolicy >::Initializer
-    ClassLevelLockable< Host, MutexPolicy >::initializer_;
 
 #endif // #if defined(LOKI_WINDOWS_H) || defined(LOKI_PTHREAD_H)
 

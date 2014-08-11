@@ -3,22 +3,36 @@
 // Copyright (c) 2000 Andrei Alexandrescu
 // Copyright (c) 2000 Petru Marginean
 // Copyright (c) 2005 Joshua Lehrer
+// Code covered by the MIT License
 //
-// Permission to use, copy, modify, distribute and sell this software for any 
-//     purpose is hereby granted without fee, provided that the above copyright 
-//     notice appear in all copies and that both that copyright notice and this 
-//     permission notice appear in supporting documentation.
-// The author makes no representations about the 
-//     suitability of this software for any purpose. It is provided "as is" 
-//     without express or implied warranty.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 #ifndef LOKI_SCOPEGUARD_INC_
 #define LOKI_SCOPEGUARD_INC_
 
-// $Id: ScopeGuard.h 799 2006-12-20 00:37:13Z rich_sposato $
+// $Id: ScopeGuard.h 1184 2013-06-19 02:23:00Z rich_sposato $
 
+#include <exception>  // needed for calls to uncaught_exception.
 
 #include <loki/RefToValue.h>
+#include <loki/Concatenate.h>
+
 
 /// \defgroup ExceptionGroup Exception-safe code
 
@@ -42,6 +56,30 @@ namespace Loki
 
     class ScopeGuardImplBase
     {
+
+    public:
+
+        enum ExceptionPolicy
+        {
+            AlwaysExecute     = 0,
+            CallIfNoException = 1,
+            CallIfException   = 2
+        };
+
+        ScopeGuardImplBase() throw() : dismissed_(false), exceptionPolicy_( AlwaysExecute )
+        {}
+
+        void Dismiss() const throw()
+        {
+            dismissed_ = true;
+        }
+
+        void SetExceptionPolicy( ExceptionPolicy policy ) const throw()
+        {
+            exceptionPolicy_ = policy;
+        }
+
+    private:
         /// Copy-assignment operator is not implemented and private.
         ScopeGuardImplBase& operator =(const ScopeGuardImplBase&);
 
@@ -51,34 +89,42 @@ namespace Loki
         {}
 
         /// Copy-constructor takes over responsibility from other ScopeGuard.
-        ScopeGuardImplBase(const ScopeGuardImplBase& other) throw() 
+        ScopeGuardImplBase(const ScopeGuardImplBase& other) throw()
             : dismissed_(other.dismissed_)
+             , exceptionPolicy_( other.exceptionPolicy_ )
         {
             other.Dismiss();
         }
 
         template <typename J>
-        static void SafeExecute(J& j) throw() 
+        static void SafeExecute(J& j) throw()
         {
+            if ( AlwaysExecute != j.exceptionPolicy_ )
+            {
+                const bool anyThrown = ::std::uncaught_exception();
+                if ( anyThrown )
+                {
+                    if ( CallIfNoException == j.exceptionPolicy_ )
+                        j.Dismiss();
+                }
+                else if ( CallIfException == j.exceptionPolicy_ )
+                {
+                        j.Dismiss();
+                }
+            }
             if (!j.dismissed_)
+            {
                 try
                 {
                     j.Execute();
                 }
                 catch(...)
                 {}
+            }
         }
-        
+
         mutable bool dismissed_;
-
-    public:
-        ScopeGuardImplBase() throw() : dismissed_(false) 
-        {}
-
-        void Dismiss() const throw() 
-        {
-            dismissed_ = true;
-        }
+        mutable ExceptionPolicy exceptionPolicy_;
     };
 
     ////////////////////////////////////////////////////////////////
@@ -113,24 +159,24 @@ namespace Loki
             return ScopeGuardImpl0<F>(fun);
         }
 
-        ~ScopeGuardImpl0() throw() 
+        ~ScopeGuardImpl0() throw()
         {
             SafeExecute(*this);
         }
 
-        void Execute() 
+        void Execute()
         {
             fun_();
         }
 
     protected:
-        ScopeGuardImpl0(F fun) : fun_(fun) 
+        ScopeGuardImpl0(F fun) : fun_(fun)
         {}
 
         F fun_;
     };
 
-    template <typename F> 
+    template <typename F>
     inline ScopeGuardImpl0<F> MakeGuard(F fun)
     {
         return ScopeGuardImpl0<F>::MakeGuard(fun);
@@ -160,7 +206,7 @@ namespace Loki
             return ScopeGuardImpl1<F, P1>(fun, p1);
         }
 
-        ~ScopeGuardImpl1() throw() 
+        ~ScopeGuardImpl1() throw()
         {
             SafeExecute(*this);
         }
@@ -171,14 +217,14 @@ namespace Loki
         }
 
     protected:
-        ScopeGuardImpl1(F fun, P1 p1) : fun_(fun), p1_(p1) 
+        ScopeGuardImpl1(F fun, P1 p1) : fun_(fun), p1_(p1)
         {}
 
         F fun_;
         const P1 p1_;
     };
 
-    template <typename F, typename P1> 
+    template <typename F, typename P1>
     inline ScopeGuardImpl1<F, P1> MakeGuard(F fun, P1 p1)
     {
         return ScopeGuardImpl1<F, P1>::MakeGuard(fun, p1);
@@ -208,7 +254,7 @@ namespace Loki
             return ScopeGuardImpl2<F, P1, P2>(fun, p1, p2);
         }
 
-        ~ScopeGuardImpl2() throw() 
+        ~ScopeGuardImpl2() throw()
         {
             SafeExecute(*this);
         }
@@ -219,7 +265,7 @@ namespace Loki
         }
 
     protected:
-        ScopeGuardImpl2(F fun, P1 p1, P2 p2) : fun_(fun), p1_(p1), p2_(p2) 
+        ScopeGuardImpl2(F fun, P1 p1, P2 p2) : fun_(fun), p1_(p1), p2_(p2)
         {}
 
         F fun_;
@@ -257,7 +303,7 @@ namespace Loki
             return ScopeGuardImpl3<F, P1, P2, P3>(fun, p1, p2, p3);
         }
 
-        ~ScopeGuardImpl3() throw() 
+        ~ScopeGuardImpl3() throw()
         {
             SafeExecute(*this);
         }
@@ -268,7 +314,7 @@ namespace Loki
         }
 
     protected:
-        ScopeGuardImpl3(F fun, P1 p1, P2 p2, P3 p3) : fun_(fun), p1_(p1), p2_(p2), p3_(p3) 
+        ScopeGuardImpl3(F fun, P1 p1, P2 p2, P3 p3) : fun_(fun), p1_(p1), p2_(p2), p3_(p3)
         {}
 
         F fun_;
@@ -308,7 +354,7 @@ namespace Loki
             return ScopeGuardImpl4< F, P1, P2, P3, P4 >( fun, p1, p2, p3, p4 );
         }
 
-        ~ScopeGuardImpl4() throw() 
+        ~ScopeGuardImpl4() throw()
         {
             SafeExecute( *this );
         }
@@ -361,7 +407,7 @@ namespace Loki
             return ScopeGuardImpl5< F, P1, P2, P3, P4, P5 >( fun, p1, p2, p3, p4, p5 );
         }
 
-        ~ScopeGuardImpl5() throw() 
+        ~ScopeGuardImpl5() throw()
         {
             SafeExecute( *this );
         }
@@ -415,18 +461,18 @@ namespace Loki
             return ObjScopeGuardImpl0<Obj, MemFun>(obj, memFun);
         }
 
-        ~ObjScopeGuardImpl0() throw() 
+        ~ObjScopeGuardImpl0() throw()
         {
             SafeExecute(*this);
         }
 
-        void Execute() 
+        void Execute()
         {
             (obj_.*memFun_)();
         }
 
     protected:
-        ObjScopeGuardImpl0(Obj& obj, MemFun memFun) : obj_(obj), memFun_(memFun) 
+        ObjScopeGuardImpl0(Obj& obj, MemFun memFun) : obj_(obj), memFun_(memFun)
         {}
 
         Obj& obj_;
@@ -440,13 +486,13 @@ namespace Loki
     }
 
     template <typename Ret, class Obj1, class Obj2>
-    inline ObjScopeGuardImpl0<Obj1,Ret(Obj2::*)()> MakeGuard(Ret(Obj2::*memFun)(), Obj1 &obj) 
+    inline ObjScopeGuardImpl0<Obj1,Ret(Obj2::*)()> MakeGuard(Ret(Obj2::*memFun)(), Obj1 &obj)
     {
       return ObjScopeGuardImpl0<Obj1,Ret(Obj2::*)()>::MakeObjGuard(obj,memFun);
     }
 
     template <typename Ret, class Obj1, class Obj2>
-    inline ObjScopeGuardImpl0<Obj1,Ret(Obj2::*)()> MakeGuard(Ret(Obj2::*memFun)(), Obj1 *obj) 
+    inline ObjScopeGuardImpl0<Obj1,Ret(Obj2::*)()> MakeGuard(Ret(Obj2::*memFun)(), Obj1 *obj)
     {
       return ObjScopeGuardImpl0<Obj1,Ret(Obj2::*)()>::MakeObjGuard(*obj,memFun);
     }
@@ -477,20 +523,20 @@ namespace Loki
             return ObjScopeGuardImpl1<Obj, MemFun, P1>(obj, memFun, p1);
         }
 
-        ~ObjScopeGuardImpl1() throw() 
+        ~ObjScopeGuardImpl1() throw()
         {
             SafeExecute(*this);
         }
 
-        void Execute() 
+        void Execute()
         {
             (obj_.*memFun_)(p1_);
         }
 
     protected:
-        ObjScopeGuardImpl1(Obj& obj, MemFun memFun, P1 p1) : obj_(obj), memFun_(memFun), p1_(p1) 
+        ObjScopeGuardImpl1(Obj& obj, MemFun memFun, P1 p1) : obj_(obj), memFun_(memFun), p1_(p1)
         {}
-        
+
         Obj& obj_;
         MemFun memFun_;
         const P1 p1_;
@@ -503,13 +549,13 @@ namespace Loki
     }
 
     template <typename Ret, class Obj1, class Obj2, typename P1a, typename P1b>
-    inline ObjScopeGuardImpl1<Obj1,Ret(Obj2::*)(P1a),P1b> MakeGuard(Ret(Obj2::*memFun)(P1a), Obj1 &obj, P1b p1) 
+    inline ObjScopeGuardImpl1<Obj1,Ret(Obj2::*)(P1a),P1b> MakeGuard(Ret(Obj2::*memFun)(P1a), Obj1 &obj, P1b p1)
     {
       return ObjScopeGuardImpl1<Obj1,Ret(Obj2::*)(P1a),P1b>::MakeObjGuard(obj,memFun,p1);
     }
 
     template <typename Ret, class Obj1, class Obj2, typename P1a, typename P1b>
-    inline ObjScopeGuardImpl1<Obj1,Ret(Obj2::*)(P1a),P1b> MakeGuard(Ret(Obj2::*memFun)(P1a), Obj1 *obj, P1b p1) 
+    inline ObjScopeGuardImpl1<Obj1,Ret(Obj2::*)(P1a),P1b> MakeGuard(Ret(Obj2::*memFun)(P1a), Obj1 *obj, P1b p1)
     {
       return ObjScopeGuardImpl1<Obj1,Ret(Obj2::*)(P1a),P1b>::MakeObjGuard(*obj,memFun,p1);
     }
@@ -540,18 +586,18 @@ namespace Loki
             return ObjScopeGuardImpl2<Obj, MemFun, P1, P2>(obj, memFun, p1, p2);
         }
 
-        ~ObjScopeGuardImpl2() throw() 
+        ~ObjScopeGuardImpl2() throw()
         {
             SafeExecute(*this);
         }
 
-        void Execute() 
+        void Execute()
         {
             (obj_.*memFun_)(p1_, p2_);
         }
 
     protected:
-        ObjScopeGuardImpl2(Obj& obj, MemFun memFun, P1 p1, P2 p2) : obj_(obj), memFun_(memFun), p1_(p1), p2_(p2) 
+        ObjScopeGuardImpl2(Obj& obj, MemFun memFun, P1 p1, P2 p2) : obj_(obj), memFun_(memFun), p1_(p1), p2_(p2)
         {}
 
         Obj& obj_;
@@ -567,13 +613,13 @@ namespace Loki
     }
 
     template <typename Ret, class Obj1, class Obj2, typename P1a, typename P1b, typename P2a, typename P2b>
-    inline ObjScopeGuardImpl2<Obj1,Ret(Obj2::*)(P1a,P2a),P1b,P2b> MakeGuard(Ret(Obj2::*memFun)(P1a,P2a), Obj1 &obj, P1b p1, P2b p2) 
+    inline ObjScopeGuardImpl2<Obj1,Ret(Obj2::*)(P1a,P2a),P1b,P2b> MakeGuard(Ret(Obj2::*memFun)(P1a,P2a), Obj1 &obj, P1b p1, P2b p2)
     {
       return ObjScopeGuardImpl2<Obj1,Ret(Obj2::*)(P1a,P2a),P1b,P2b>::MakeObjGuard(obj,memFun,p1,p2);
     }
 
     template <typename Ret, class Obj1, class Obj2, typename P1a, typename P1b, typename P2a, typename P2b>
-    inline ObjScopeGuardImpl2<Obj1,Ret(Obj2::*)(P1a,P2a),P1b,P2b> MakeGuard(Ret(Obj2::*memFun)(P1a,P2a), Obj1 *obj, P1b p1, P2b p2) 
+    inline ObjScopeGuardImpl2<Obj1,Ret(Obj2::*)(P1a,P2a),P1b,P2b> MakeGuard(Ret(Obj2::*memFun)(P1a,P2a), Obj1 *obj, P1b p1, P2b p2)
     {
       return ObjScopeGuardImpl2<Obj1,Ret(Obj2::*)(P1a,P2a),P1b,P2b>::MakeObjGuard(*obj,memFun,p1,p2);
     }
@@ -605,12 +651,12 @@ namespace Loki
             return ObjScopeGuardImpl3< Obj, MemFun, P1, P2, P3 >( obj, memFun, p1, p2, p3 );
         }
 
-        ~ObjScopeGuardImpl3() throw() 
+        ~ObjScopeGuardImpl3() throw()
         {
             SafeExecute( *this );
         }
 
-        void Execute() 
+        void Execute()
         {
             ( obj_.*memFun_ )( p1_, p2_, p3_ );
         }
@@ -655,8 +701,6 @@ namespace Loki
 
 } // namespace Loki
 
-#define LOKI_CONCATENATE_DIRECT(s1, s2)  s1##s2
-#define LOKI_CONCATENATE(s1, s2)         LOKI_CONCATENATE_DIRECT(s1, s2)
 #define LOKI_ANONYMOUS_VARIABLE(str)     LOKI_CONCATENATE(str, __LINE__)
 
 #define LOKI_ON_BLOCK_EXIT      ::Loki::ScopeGuard LOKI_ANONYMOUS_VARIABLE(scopeGuard) = ::Loki::MakeGuard

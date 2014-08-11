@@ -1,16 +1,27 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // LevelMutex facility for the Loki Library
-// Copyright (c) 2008 Richard Sposato
-// The copyright on this file is protected under the terms of the MIT license.
+// Copyright (c) 2008, 2009 Richard Sposato
 //
-// Permission to use, copy, modify, distribute and sell this software for any 
-// purpose is hereby granted without fee, provided that the above copyright 
-// notice appear in all copies and that both that copyright notice and this 
-// permission notice appear in supporting documentation.
+// Code covered by the MIT License
 //
-// The author makes no representations about the suitability of this software
-// for any purpose. It is provided "as is" without express or implied warranty.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -24,46 +35,27 @@
 
 // ----------------------------------------------------------------------------
 
-#include <vector>
-#include <assert.h>
-#include <time.h>
-
 #if defined( _MSC_VER )
     #include <Windows.h>
 #else
     #include <pthread.h>
 #endif
 
-#if !defined(_WIN32) && !defined(_WIN64)
-    #include <unistd.h> // declares sleep under Linux
+#include <exception>
+#include <vector>
+#include <assert.h>
+#include <time.h>
+
+#if !defined( _WIN32 ) && !defined( _WIN64 )
+    #include <unistd.h> // declares usleep under Linux
 #endif
 
-/** @par thread_local Keyword
- The mutexes require compilers to provide thread local storage - meaning each
- thread gets its own copy of the data.  The next version of C++ will have a
- new keyword, thread_local for that purpose.  Some existing compilers already
- provide thread local storage using different syntax, so these lines use
- thread_local to mimic that syntax.  If your compiler provides thread local
- storage but using different syntax besides "thread_local", you may want to
- modify these lines.  If your compiler does not support thread local storage,
- you can't use LevelMutex.
- */
-#ifndef LOKI_THREAD_LOCAL
-    #if defined( _MSC_VER )
-        #if ( _MSC_VER >= 1300 )
-            #define LOKI_THREAD_LOCAL __declspec( thread )
-        #else
-            #error "Only Visual Studio versions 7.0 and after supported."
-        #endif
+#include <loki/ThreadLocal.h> // Include Loki's form of thread_local declaration.
+#include <loki/Checker.h> // Needed to check class invariants.
 
-    #elif ( __GNUC__ )
-        #define LOKI_THREAD_LOCAL __thread
-
-    #else
-        #warning "Check if your compiler provides thread local storage."
-        #define LOKI_THREAD_LOCAL thread_local
-    #endif
-#endif
+#if !defined( LOKI_THREAD_LOCAL )
+    #warning "Your compiler will not allow Loki::LevelMutex."
+#else
 
 #if defined( DEBUG ) || defined( _DEBUG )
     #define LOKI_MUTEX_DEBUG_CODE( x ) x
@@ -106,7 +98,11 @@ public:
         InvalidAttribute,   ///< PThread mutex improperly initialized.
         InvalidAddress,     ///< Bad pointer used to initialize a PThread mutex.
         ExceptionThrown,    ///< Exception caught in mutex operation.
+        InvertedPriority,   ///< Mutex already locked by thread with lower priority.
         MayDeadlock,        ///< Locking this mutex may cause a deadlock.
+        NotPrivileged,      ///< Program does not have privilege to initialize mutexes.
+        NotEnoughMemory,    ///< Program does not have enough memory to initialize mutex.
+        NotEnoughResources, ///< Program does not have enough resources to initialize mutex.
         OtherError          ///< Unknown error occurred.
     };
 };
@@ -148,8 +144,10 @@ class LevelMutexInfo
 {
 public:
 
-    /** Level for thread that has not locked any mutex. Maximum possible level
-     for a mutex is UnlockedLevel-1;  No mutex may have a level of UnlockedLevel.
+    /** This is the default level for a thread that has not locked any mutex. The
+     maximum possible level for a mutex is UnlockedLevel-1, and I doubt any software
+     will ever have a call stack of more than 2^32-2 functions. No mutex may have a
+     level of UnlockedLevel.
      */
     static const unsigned int UnlockedLevel = 0xFFFFFFFF;
 
@@ -259,7 +257,7 @@ public:
     /** Returns true if this mutex was locked within the last count mutexes.
      @param count How many recent mutexes to look through to find this mutex.
      */
-    bool IsRecentLock( unsigned int count ) const volatile;
+    bool IsRecentLock( std::size_t count ) const volatile;
 
     /// Returns true if this was locked by current thread.
     bool IsLockedByCurrentThread( void ) const volatile;
@@ -269,25 +267,39 @@ public:
 
 protected:
 
-    /** @class Checker Performs validity check on mutex to insure no class invariants
-     were violated inside any member function.  This class only gets used in debug
-     builds, and any instance of it gets optimized away in release builds.  A checker
-     is created inside many of member functions so that it's destructor gets called
-     when the function exits.  It determines if any class invariants were violated
-     during the function call.
-     */
-    class Checker
+    /// @class Memento Stores content of LevelMutexInfo so CheckFor can check invariants.
+    class Memento
     {
     public:
-        inline explicit Checker( const volatile LevelMutexInfo * mutex ) :
-            m_mutex( mutex ) {}
-        inline ~Checker( void ) { m_mutex->IsValid(); }
+
+        explicit Memento( const LevelMutexInfo & mutex );
+
+        bool operator == ( const LevelMutexInfo & mutex ) const;
+
     private:
-        Checker( void );
-        Checker( const Checker & );
-        Checker & operator = ( const Checker & );
-        const volatile LevelMutexInfo * m_mutex;
+
+        /// Copy-assignment operator is not implemented.
+        Memento & operator = ( const Memento & );
+
+        /// Level of this mutex.
+        const unsigned int m_level;
+
+        /// How many times this mutex got locked.
+        const unsigned int m_count;
+
+        /// Pointer to mutex locked before this one.
+        const volatile LevelMutexInfo * const m_previous;
+
+        /// True if mutex was locked when Memento was constructed.
+        const bool m_locked;
     };
+
+    /** @note CheckFor performs validity checking in many functions to determine if the
+     code violated any invariants, if any content changed, or if the function threw an
+     exception. The checkers only get used in debug builds, and get optimized away in
+     release builds.
+     */
+    typedef ::Loki::CheckFor< const LevelMutexInfo, Memento > CheckFor;
 
     /** @class MutexUndoer
      Undoes actions by MultiLock if an exception occurs.  It keeps track of
@@ -351,6 +363,17 @@ protected:
      */
     bool IsValid( void ) const volatile;
 
+    /** Returns true if no class invariant broken, otherwise asserts.  This function
+    only gets called in debug builds.
+     */
+    bool IsValid2( void ) const;
+
+    /// Returns true if all pre-conditions for PostLock function are valid.
+    bool PostLockValidator( void ) const;
+
+    /// Returns true if all pre-conditions for PreUnlock function are valid.
+    bool PreUnlockValidator( void ) const;
+
 private:
 
     /// Copy constructor is not implemented.
@@ -373,8 +396,24 @@ private:
      */
     virtual MutexErrors::Type LockThis( unsigned int milliSeconds ) volatile = 0;
 
-    /// Called only by MultiUnlock to unlock each particular mutex within a container. 
+    /// Called only by MultiUnlock to unlock each particular mutex within a container.
     virtual MutexErrors::Type UnlockThis( void ) volatile = 0;
+
+    void PostLock( void );
+
+    /** The actual implementation of IsLockedByCurrentThread. This does not do any
+     invariant checking because the functions which call it already have.
+     */
+    bool IsLockedByCurrentThreadImpl( void ) const volatile;
+
+    bool IsLockedByCurrentThreadImpl( void ) const;
+
+    /** Does just the opposite of IsLockedByCurrentThread. Called as a post-condition
+    check by another function.
+     */
+    bool IsNotLockedByCurrentThread( void ) const volatile;
+
+    bool IsNotLockedByCurrentThread( void ) const;
 
     /// Pointer to singly-linked list of mutexes locked by the current thread.
     static LOKI_THREAD_LOCAL volatile LevelMutexInfo * s_currentMutex;
@@ -564,7 +603,7 @@ private:
  Implements a sleeping loop to wait for the mutex to unlock.
 
  @par Purpose
- Since this class puts the thread to sleep for short intervals, you can use this 
+ Since this class puts the thread to sleep for short intervals, you can use this
  class for most of your mutexes. Especially for locking any high level resources
  where any one operation on the resouce consumes many CPU cycles.  The purpose of
  this mutex is to reduce the number of CPU cycles spent in idle loops.  All
@@ -679,8 +718,8 @@ private:
  either pthreads or the Windows CRITICAL_SECTION. If you want to use a mutex
  mechanism besides one of those, then all you have to do is provide a class
  which wraps the mutex and implements these functions.
-    explicit SpinLevelMutex( unsigned int level );
-    virtual ~SpinLevelMutex( void );
+    explicit MutexPolicy( unsigned int level );
+    virtual ~MutexPolicy( void );
     virtual MutexErrors::Type Lock( void ) volatile;
     virtual MutexErrors::Type TryLock( void ) volatile;
     virtual MutexErrors::Type Unlock( void ) volatile;
@@ -782,8 +821,7 @@ public:
 
     virtual MutexErrors::Type TryLock( void ) volatile
     {
-        assert( IsValid() );
-        LOKI_MUTEX_DEBUG_CODE( Checker checker( this ); (void)checker; )
+        LOKI_MUTEX_DEBUG_CODE( CheckFor::NoChangeOnThrow checker( this, &IsValid ); (void)checker; )
 
         MutexErrors::Type result = LevelMutexInfo::PreLockCheck( true );
         if ( MutexErrors::Success == result )
@@ -804,8 +842,7 @@ public:
 
     virtual MutexErrors::Type Lock( void ) volatile
     {
-        assert( IsValid() );
-        LOKI_MUTEX_DEBUG_CODE( Checker checker( this ); (void)checker; )
+        LOKI_MUTEX_DEBUG_CODE( CheckFor::NoChangeOnThrow checker( this, &IsValid ); (void)checker; )
 
         MutexErrors::Type result = LevelMutexInfo::PreLockCheck( false );
         if ( MutexErrors::Success == result )
@@ -824,8 +861,7 @@ public:
 
     virtual MutexErrors::Type Lock( unsigned int milliSeconds ) volatile
     {
-        assert( IsValid() );
-        LOKI_MUTEX_DEBUG_CODE( Checker checker( this ); (void)checker; )
+        LOKI_MUTEX_DEBUG_CODE( CheckFor::NoChangeOnThrow checker( this, &IsValid ); (void)checker; )
 
         MutexErrors::Type result = LevelMutexInfo::PreLockCheck( false );
         if ( MutexErrors::Success == result )
@@ -860,8 +896,7 @@ public:
 
     virtual MutexErrors::Type Unlock( void ) volatile
     {
-        assert( IsValid() );
-        LOKI_MUTEX_DEBUG_CODE( Checker checker( this ); (void)checker; )
+        LOKI_MUTEX_DEBUG_CODE( CheckFor::NoChangeOnThrow checker( this, &IsValid ); (void)checker; )
 
         MutexErrors::Type result = LevelMutexInfo::PreUnlockCheck();
         if ( MutexErrors::Success == result )
@@ -906,8 +941,7 @@ private:
      */
     virtual MutexErrors::Type LockThis( void ) volatile
     {
-        assert( IsValid() );
-        LOKI_MUTEX_DEBUG_CODE( Checker checker( this ); (void)checker; )
+        LOKI_MUTEX_DEBUG_CODE( CheckFor::NoChangeOnThrow checker( this, &IsValid ); (void)checker; )
         assert( this != LevelMutexInfo::GetCurrentMutex() );
 
         const MutexErrors::Type result = m_mutex.Lock();
@@ -927,8 +961,7 @@ private:
      */
     virtual MutexErrors::Type LockThis( unsigned int milliSeconds ) volatile
     {
-        assert( IsValid() );
-        LOKI_MUTEX_DEBUG_CODE( Checker checker( this ); (void)checker; )
+        LOKI_MUTEX_DEBUG_CODE( CheckFor::NoChangeOnThrow checker( this, &IsValid ); (void)checker; )
 
         clock_t timeOut = clock() + milliSeconds;
         while ( clock() < timeOut )
@@ -953,9 +986,8 @@ private:
      */
     virtual MutexErrors::Type UnlockThis( void ) volatile
     {
-        assert( IsValid() );
+        LOKI_MUTEX_DEBUG_CODE( CheckFor::NoChangeOnThrow checker( this, &IsValid ); (void)checker; )
         assert( NULL != LevelMutexInfo::GetCurrentMutex() );
-        LOKI_MUTEX_DEBUG_CODE( Checker checker( this ); (void)checker; )
 
         if ( 1 < LevelMutexInfo::GetLockCount() )
         {
@@ -1107,7 +1139,7 @@ public:
     /// Returns true if the mutex is locked by this object.
     inline bool IsLocked( void ) const { return m_locked; }
 
-    /// Provides access to mutex controlled by this. 
+    /// Provides access to mutex controlled by this.
     const volatile LevelMutexInfo & GetMutex( void ) const { return m_mutex; }
 
 private:
@@ -1185,7 +1217,7 @@ public:
     /// Returns true if the mutexes are locked by this object.
     inline bool IsLocked( void ) const { return m_locked; }
 
-    /// Provides access to the collection of mutexes controlled by this. 
+    /// Provides access to the collection of mutexes controlled by this.
     const LevelMutexInfo::MutexContainer & GetMutexes( void ) const { return m_mutexes; }
 
 private:
@@ -1207,5 +1239,7 @@ private:
 // ----------------------------------------------------------------------------
 
 } // end namespace Loki
+
+#endif // end else if compiler allows thread_local storage
 
 #endif  // end file guardian

@@ -1,12 +1,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 // The Loki Library
 // Copyright (c) 2007 Rich Sposato
-// Permission to use, copy, modify, distribute and sell this software for any 
-//     purpose is hereby granted without fee, provided that the above copyright 
-//     notice appear in all copies and that both that copyright notice and this 
+// Permission to use, copy, modify, distribute and sell this software for any
+//     purpose is hereby granted without fee, provided that the above copyright
+//     notice appear in all copies and that both that copyright notice and this
 //     permission notice appear in supporting documentation.
-// The author makes no representations about the 
-//     suitability of this software for any purpose. It is provided "as is" 
+// The author makes no representations about the
+//     suitability of this software for any purpose. It is provided "as is"
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -88,7 +88,7 @@ void StringEater( const string & s )
 
 // ----------------------------------------------------------------------------
 
-int main( unsigned int argc, const char * argv[] )
+int main( int argc, const char * argv[] )
 {
 
     if ( 2 == argc )
@@ -135,7 +135,8 @@ int main( unsigned int argc, const char * argv[] )
         // Should not assert since caller stores return value ...
         BoolReturn checkBool = CheckRequired();
         // and then deliberately ignores it before destructor runs.
-        (bool)checkBool;
+        // Ignore any compiler warnings that says code does not check return value.
+        static_cast< bool >( checkBool );
         cout << "Called CheckRequired, stored return value, and ignored it."
              << endl;
     }
@@ -143,26 +144,28 @@ int main( unsigned int argc, const char * argv[] )
     {
         // This should not assert since caller deliberately chooses to not
         // check return value by casting to return value to correct type.
-        (bool)CheckRequired();
+        // Ignore any compiler warnings that says code does not check return value.
+        static_cast< bool >( CheckRequired() );
     }
 
     {
         // This should not assert since caller deliberately chooses to not
         // check return value by casting to return value to correct type.
-        (bool)CheckRequired( false );
+        // Ignore any compiler warnings that says code does not check return value.
+        static_cast< bool >( CheckRequired( false ) );
         cout << "Made a nested call to CheckRequired." << endl;
     }
 
-	{
-		BoolReturnStderr check = CheckRequiredStderr();
-	}
-	cout << "There should be a error message: \nCheckReturn: return value was not checked" << endl;
+    {
+        BoolReturnStderr check = CheckRequiredStderr();
+    }
+    cout << "There should be a error message: \nCheckReturn: return value was not checked" << endl;
 
     // This should assert since caller does not check return value.
     CheckRequired();
     cout << "Should assert before this line!  How did we get here?" << endl;
 
-	return 0;
+    return 0;
 }
 
 // ----------------------------------------------------------------------------

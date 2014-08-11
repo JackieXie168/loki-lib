@@ -10,7 +10,7 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: main.cpp 823 2007-05-08 10:48:40Z lfittl $
+// $Id: main.cpp 1025 2009-09-26 23:49:05Z rich_sposato $
 
 
 #define LOKI_CLASS_LEVEL_THREADING
@@ -99,6 +99,8 @@ int main ()
 {
     std::vector<Thread*> threads;
 
+    Printf("--------------------------------------------------------------------------------------\n");
+
     for(int i=0; i<numThreads; i++)
     {
         Printf("Creating thread %d\n")(i);
@@ -111,7 +113,18 @@ int main ()
     Thread::DeleteThreads(threads);
 
     Printf("--------------------------------------------------------------------------------------\n");
-    Printf("--------------------------------------------------------------------------------------\n");
+
+    for(int i=0; i<numThreads; i++)
+    {
+        Printf("Creating thread %d\n")(i);
+        threads.push_back(new Thread(RunConstLocked,reinterpret_cast<void*>(i)));
+    }
+    for(int i=0; i<numThreads; i++)
+        threads.at(i)->start();
+
+    Thread::JoinThreads(threads);
+    Thread::DeleteThreads(threads);
+
     Printf("--------------------------------------------------------------------------------------\n");
 
     for(int i=0; i<numThreads; i++)
@@ -125,6 +138,7 @@ int main ()
     Thread::JoinThreads(threads);
     Thread::DeleteThreads(threads);
 
+    Printf("--------------------------------------------------------------------------------------\n");
     
     // test pair ctor
     volatile A a;

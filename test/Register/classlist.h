@@ -12,12 +12,12 @@
 #ifndef CLASSLIST_H
 #define CLASSLIST_H
 
-// $Id: classlist.h 760 2006-10-17 20:36:13Z syntheticpp $
+// $Id: classlist.h 1060 2009-11-21 10:44:08Z syntheticpp $
 
 
 #include <string>
 
-#include <loki/Register.h>
+#include <loki/Sequence.h>
 
 
 struct Base

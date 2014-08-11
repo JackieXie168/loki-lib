@@ -7,20 +7,36 @@
 //     Patterns Applied". Copyright (c) 2001. Addison-Wesley.
 //
 // Code covered by the MIT License
-// The authors make no representations about the suitability of this software
-// for any purpose. It is provided "as is" without express or implied warranty.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 #ifndef LOKI_FACTORYPARM_INC_
 #define LOKI_FACTORYPARM_INC_
 
-// $Id: Factory.h 788 2006-11-24 22:30:54Z clitte_bbt $
+// $Id: Factory.h 1115 2011-09-23 00:46:21Z rich_sposato $
 
 
-#include "LokiTypeInfo.h"
-#include "Functor.h"
-#include "AssocVector.h"
-#include "SmallObj.h"
-#include "Sequence.h"
+#include <loki/LokiTypeInfo.h>
+#include <loki/Functor.h>
+#include <loki/AssocVector.h>
+#include <loki/SmallObj.h>
+#include <loki/Sequence.h>
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -33,7 +49,7 @@
  * \defgroup	FactoryGroup Factory
  * \ingroup		FactoriesGroup
  * \brief		Implements a generic object factory.
- * 
+ *
  * <i>The Factory Method pattern is an object-oriented design pattern.
  * Like other creational patterns, it deals with the problem of creating objects
  * (products) without specifying the exact class of object that will be created.
@@ -46,7 +62,7 @@
  * whose main purpose is creation of objects.</i>
  * <div ALIGN="RIGHT"><a href="http://en.wikipedia.org/wiki/Factory_method_pattern">
  * Wikipedia</a></div>
- * 
+ *
  * Loki proposes a generic version of the Factory. Here is a typical use.<br>
  * <code><br>
  * 1. Factory< AbstractProduct, int > aFactory;<br>
@@ -62,7 +78,7 @@
  * ProductCreator by registering them into the Factory.<br>
  * A ProductCreator is a just a function that will return the right object. ie <br>
  * <code>
- * Product* createProductNull()<br>             
+ * Product* createProductNull()<br>
  * {<br>
  *     return new Product<br>
  * }<br>
@@ -80,11 +96,11 @@ namespace Loki
  * \defgroup	FactoryErrorPoliciesGroup Factory Error Policies
  * \ingroup		FactoryGroup
  * \brief		Manages the "Unknown Type" error in an object factory
- * 
+ *
  * \class DefaultFactoryError
  * \ingroup		FactoryErrorPoliciesGroup
- * \brief		Default policy that throws an exception		
- * 
+ * \brief		Default policy that throws an exception
+ *
  */
 
     template <typename IdentifierType, class AbstractProduct>
@@ -751,6 +767,7 @@ template <typename AP, typename Id, typename P1 >
     >
     class Factory : public FactoryErrorPolicy<IdentifierType, AbstractProduct>
     {
+    protected:
         typedef FactoryImpl< AbstractProduct, IdentifierType, CreatorParmTList > Impl;
 
         typedef typename Impl::Parm1 Parm1;
@@ -771,6 +788,7 @@ template <typename AP, typename Id, typename P1 >
 
         typedef Functor<AbstractProduct*, CreatorParmTList> ProductCreator;
 
+    private:
         typedef AssocVector<IdentifierType, ProductCreator> IdToProductMap;
 
         IdToProductMap associations_;
@@ -804,6 +822,11 @@ template <typename AP, typename Id, typename P1 >
         bool Unregister(const IdentifierType& id)
         {
             return associations_.erase(id) != 0;
+        }
+
+        bool IsRegistered(const IdentifierType& id)
+        {
+            return associations_.find(id) != associations_.end();
         }
 
         std::vector<IdentifierType> RegisteredIds()
@@ -1058,9 +1081,9 @@ template <typename AP, typename Id, typename P1 >
             	return NULL;
             }
 
-            typename IdToProductMap::iterator i = 
+            typename IdToProductMap::iterator i =
             	associations_.find(typeid(*model));
-            	
+
             if (i != associations_.end())
             {
                 return (i->second)(model);
@@ -1072,7 +1095,7 @@ template <typename AP, typename Id, typename P1 >
         typedef AssocVector<TypeInfo, ProductCreator> IdToProductMap;
         IdToProductMap associations_;
     };
-        
+
 } // namespace Loki
 
 

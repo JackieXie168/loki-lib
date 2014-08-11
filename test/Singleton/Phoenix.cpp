@@ -8,7 +8,7 @@
 // for any purpose. It is provided "as is" without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: Phoenix.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+// $Id: Phoenix.cpp 1133 2011-10-03 05:03:10Z rich_sposato $
 
 
 // A singleton LogClass object that resurrects itself after
@@ -81,6 +81,9 @@ public:
 
 int main(int argc, char* argv[])
 {
+	(void)argc;
+	(void)argv;
+
     Example *example = new Example();
      SetLongevity<Example, void (*)(Example*)>(example, 1, &Loki::Private::Deleter<Example>::Delete);
     LogBook::Instance().echo("LogClass now instantiated.");

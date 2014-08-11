@@ -1,12 +1,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Part of LevelMutex test program for The Loki Library
-// Copyright (c) 2008 Richard Sposato
+// Copyright (c) 2008, 2009 Richard Sposato
 // The copyright on this file is protected under the terms of the MIT license.
 //
-// Permission to use, copy, modify, distribute and sell this software for any 
-// purpose is hereby granted without fee, provided that the above copyright 
-// notice appear in all copies and that both that copyright notice and this 
+// Permission to use, copy, modify, distribute and sell this software for any
+// purpose is hereby granted without fee, provided that the above copyright
+// notice appear in all copies and that both that copyright notice and this
 // permission notice appear in supporting documentation.
 //
 // The author makes no representations about the suitability of this software
@@ -22,11 +22,10 @@
 #include "MultiThreadTests.hpp"
 
 #include <assert.h>
-#include <process.h>
 #include <stdlib.h>
 #include <time.h>
 
-#include <SafeFormat.h>
+#include <loki/SafeFormat.h>
 
 #include "ThreadPool.hpp"
 #include "Thing.hpp"
@@ -90,7 +89,7 @@ using namespace Loki;
 
 void * PrintSafeThread( void * p )
 {
-    unsigned int value = reinterpret_cast< unsigned int >( p );
+    uintptr_t value = reinterpret_cast< uintptr_t >( p );
     volatile Thing & thing = Thing::GetIt();
     try
     {
@@ -120,7 +119,7 @@ void * PrintSafeThread( void * p )
 
 void * PrintUnsafeThread( void * p )
 {
-    unsigned int value = reinterpret_cast< unsigned int >( p );
+    uintptr_t value = reinterpret_cast< uintptr_t >( p );
     Thing & thing = const_cast< Thing & >( Thing::GetIt() );
     try
     {
@@ -148,7 +147,7 @@ void * PrintUnsafeThread( void * p )
 
 // ----------------------------------------------------------------------------
 
-void OutputResults( unsigned int loop, unsigned int value, unsigned int result )
+void OutputResults( unsigned int loop, uintptr_t value, uintptr_t result )
 {
     static volatile SleepMutex mutex( 2 );
     static bool initialized = false;
@@ -178,7 +177,7 @@ void * ValueSafeThread( void * p )
 
     const unsigned int testCount = 8;
     unsigned int fails = 0;
-    const unsigned int value = reinterpret_cast< unsigned int >( p );
+    const uintptr_t value = reinterpret_cast< uintptr_t >( p );
     volatile Thing & thing = Thing::GetIt();
     try
     {
@@ -188,7 +187,7 @@ void * ValueSafeThread( void * p )
             (void)locker;
             thing.SetValue( value );
             ::GoToSleep( 3 );
-            const unsigned int result = thing.GetValue();
+            const uintptr_t result = thing.GetValue();
             OutputResults( ii, value, result );
             if ( result != value )
                 fails++;
@@ -211,7 +210,7 @@ void * ValueUnsafeThread( void * p )
 
     const unsigned int testCount = 8;
     unsigned int fails = 0;
-    const unsigned int value = reinterpret_cast< unsigned int >( p );
+    const uintptr_t value = reinterpret_cast< uintptr_t >( p );
     // cast away volatility so the mutex doesn't get used by volatile functions.
     Thing & thing = const_cast< Thing & >( Thing::GetIt() );
     try
@@ -220,7 +219,7 @@ void * ValueUnsafeThread( void * p )
         {
             thing.SetValue( value );
             ::GoToSleep( 3 );
-            const unsigned int result = thing.GetValue();
+            const uintptr_t result = thing.GetValue();
             OutputResults( ii, value, result );
             if ( result != value )
                 fails++;
@@ -239,29 +238,40 @@ void * ValueUnsafeThread( void * p )
 
 void MultiThreadSimpleTest( void )
 {
+    cout << "Starting MultiThreadSimpleTest." << endl;
+
+    char ender;
     Thing::Init( 0 );
     const unsigned int threadCount = 5;
-    ThreadPool pool( threadCount );
 
-    cout << endl << "Doing thread-locked print test.  This test should pass. and not deadlock" << endl;
-    ::system( "pause" );
-    for ( unsigned int ii = 0; ii < threadCount; ++ii )
     {
-        void * p = reinterpret_cast< void * >( ii );
-        pool.Start( PrintSafeThread, p );
+        ThreadPool pool( threadCount );
+        cout << "Doing thread-locked print test.  This test should pass and not deadlock" << endl;
+        cout << "Press <Enter> key to start test. ";
+        cin.get( ender );
+        for ( uintptr_t ii = 0; ii < threadCount; ++ii )
+        {
+            void * p = reinterpret_cast< void * >( ii );
+            pool.Start( PrintSafeThread, p );
+        }
+        pool.JoinAll();
     }
-    pool.JoinAll();
 
-    cout << endl << "Doing thread-unsafe print test.  This test may fail." << endl;
-    ::system( "pause" );
-    for ( unsigned int ii = 0; ii < threadCount; ++ii )
     {
-        void * p = reinterpret_cast< void * >( ii );
-        pool.Start( PrintUnsafeThread, p );
+        ThreadPool pool( threadCount );
+        cout << endl << "Doing thread-unsafe print test.  This test may fail, but not deadlock." << endl;
+        cout << "Press <Enter> key to start test. ";
+        cin.get( ender );
+        for ( uintptr_t ii = 0; ii < threadCount; ++ii )
+        {
+            void * p = reinterpret_cast< void * >( ii );
+            pool.Start( PrintUnsafeThread, p );
+        }
+        pool.JoinAll();
     }
-    pool.JoinAll();
 
     Thing::Destroy();
+    cout << "Finished MultiThreadSimpleTest." << endl;
 }
 
 // ----------------------------------------------------------------------------
@@ -269,7 +279,7 @@ void MultiThreadSimpleTest( void )
 void * TryLockThread( void * p )
 {
 
-    const unsigned int value = reinterpret_cast< unsigned int >( p );
+    const uintptr_t value = reinterpret_cast< uintptr_t >( p );
     volatile Thing & thing = Thing::GetIt();
     volatile SleepMutex & mutex = thing.GetMutex();
     assert( mutex.IsLockedByAnotherThread() );
@@ -287,8 +297,9 @@ void * TryLockThread( void * p )
             result = mutex.Unlock();
             assert( result == MutexErrors::Success );
         }
-        const unsigned int gotValue = thing.GetValue();
+        const uintptr_t gotValue = thing.GetValue();
         assert( gotValue != value );
+        (void)gotValue;
     }
     assert( mutex.IsLockedByAnotherThread() );
 
@@ -299,13 +310,13 @@ void * TryLockThread( void * p )
 
 void MultiThreadTryLockTest( void )
 {
-    static const unsigned int threadCount = 3;
+    cout << "Starting MultiThreadTryLockTest." << endl;
+
+    char ender;
+    static const uintptr_t threadCount = 3;
     Thing::Init( 0 );
     volatile Thing & thing = Thing::GetIt();
     volatile SleepMutex & mutex = thing.GetMutex();
-
-    cout << endl << "Doing multi-threaded TryLock test.  This test should not deadlock." << endl;
-    ::system( "pause" );
     // First step is to lock the mutex in the main thread so no child thread
     // can ever lock it, change the value, or anything like that.
     MutexErrors::Type result = mutex.Lock();
@@ -313,15 +324,22 @@ void MultiThreadTryLockTest( void )
     bool okay = mutex.IsLockedByCurrentThread();
     assert( okay );
     thing.SetValue( threadCount );
-    ThreadPool pool( threadCount );
-    for ( unsigned int ii = 0; ii < threadCount; ++ii )
+
     {
-        void * p = reinterpret_cast< void * >( ii );
-        pool.Start( TryLockThread, p );
+        ThreadPool pool( threadCount );
+        cout << endl << "Doing multi-threaded TryLock test.  This test should not deadlock." << endl;
+        cout << "Press <Enter> key to start test. ";
+        cin.get( ender );
+        for ( uintptr_t ii = 0; ii < threadCount; ++ii )
+        {
+            void * p = reinterpret_cast< void * >( ii );
+            pool.Start( TryLockThread, p );
+        }
+        pool.JoinAll();
+        const uintptr_t value = thing.GetValue();
+        assert( value == threadCount );
     }
-    pool.JoinAll();
-    const unsigned int value = thing.GetValue();
-    assert( value == threadCount );
+
     result = mutex.Unlock();
     assert( MutexErrors::Success == result );
     okay = !mutex.IsLockedByCurrentThread();
@@ -330,46 +348,60 @@ void MultiThreadTryLockTest( void )
     assert( okay );
 
     Thing::Destroy();
+
+    cout << "Finished MultiThreadTryLockTest." << endl;
 }
 
 // ----------------------------------------------------------------------------
 
 void MultiThreadReentrantTest( void )
 {
+    cout << "Starting MultiThreadReentrantTest." << endl;
+
+    char ender;
     Thing::Init( 0 );
     const unsigned int threadCount = 8;
     TestResults::Create( threadCount );
-    ThreadPool pool( threadCount );
 
-    cout << endl << "Doing thread-safe value test.  This test should pass and not deadlock." << endl;
-    ::system( "pause" );
-    for ( unsigned int ii = 0; ii < threadCount; ++ii )
     {
-        void * p = reinterpret_cast< void * >( ii );
-        pool.Start( ValueSafeThread, p );
+        ThreadPool pool( threadCount );
+        cout << endl << "Doing thread-safe value test.  This test should pass and not deadlock." << endl;
+        cout << "Press <Enter> key to start test. ";
+        cin.get( ender );
+        for ( uintptr_t ii = 0; ii < threadCount; ++ii )
+        {
+            void * p = reinterpret_cast< void * >( ii );
+            pool.Start( ValueSafeThread, p );
+        }
+        pool.JoinAll();
+        TestResults::GetIt()->OutputResults();
     }
-    pool.JoinAll();
-    TestResults::GetIt()->OutputResults();
 
-    cout << endl << "Doing thread-unsafe value test.  This test may fail." << endl;
-    ::system( "pause" );
-    for ( unsigned int ii = 0; ii < threadCount; ++ii )
     {
-        void * p = reinterpret_cast< void * >( ii );
-        pool.Start( ValueUnsafeThread, p );
+        ThreadPool pool( threadCount );
+        cout << endl << "Doing thread-unsafe value test.  This test may fail." << endl;
+        cout << "Press <Enter> key to start test. ";
+        cin.get( ender );
+        for ( unsigned int ii = 0; ii < threadCount; ++ii )
+        {
+            void * p = reinterpret_cast< void * >( ii );
+            pool.Start( ValueUnsafeThread, p );
+        }
+        pool.JoinAll();
+        TestResults::GetIt()->OutputResults();
     }
-    pool.JoinAll();
-    TestResults::GetIt()->OutputResults();
 
     TestResults::Destroy();
     Thing::Destroy();
+
+    cout << "Finished MultiThreadReentrantTest." << endl;
 }
 
 // ----------------------------------------------------------------------------
 
 bool RandomizeMutexOrder( LevelMutexInfo::MutexContainer & mutexes )
 {
-    unsigned int count = mutexes.size();
+    const size_t count = mutexes.size();
     if ( count < 2 )
         return false;
 
@@ -377,7 +409,7 @@ bool RandomizeMutexOrder( LevelMutexInfo::MutexContainer & mutexes )
     for ( unsigned int ii = 0; ii < count; ++ii )
     {
         volatile LevelMutexInfo * mutex = nullptr;
-        const unsigned int sizeNow = mutexes.size();
+        const size_t sizeNow = mutexes.size();
         if ( 1 < sizeNow )
         {
             unsigned int index = ( ::rand() % sizeNow );
@@ -510,7 +542,7 @@ void SingleThreadComplexMultiLockTest( bool doSetup )
 void * MultiLockSafeThread( void * p )
 {
 
-    const unsigned int value = reinterpret_cast< unsigned int >( p );
+    const uintptr_t value = reinterpret_cast< uintptr_t >( p );
     LevelMutexInfo::MutexContainer mutexes( thingCount );
     volatile Thing * thing = nullptr;
     unsigned int jj = 0;
@@ -567,6 +599,7 @@ void * MultiLockSafeThread( void * p )
 
             bool okay = locker.Unlock();
             assert( okay );
+            (void)okay;
             ::GoToSleep( 2 );
         }
     }
@@ -585,7 +618,7 @@ void * MultiLockSafeThread( void * p )
 void * MultiLockUnsafeThread( void * p )
 {
 
-    const unsigned int value = reinterpret_cast< unsigned int >( p );
+    const uintptr_t value = reinterpret_cast< uintptr_t >( p );
     Thing * thing = nullptr;
     unsigned int jj = 0;
     unsigned int tests = 0;
@@ -646,41 +679,53 @@ void * MultiLockUnsafeThread( void * p )
 
 void MultiThreadMultiLockTest( void )
 {
+    cout << "Starting MultiThreadMultiLockTest." << endl;
+
+    char ender;
     Thing::MakePool( thingCount );
-    const unsigned int threadCount = 8;
+    const uintptr_t threadCount = 8;
     TestResults::Create( threadCount );
-    ThreadPool pool( threadCount );
 
-    cout << endl << "Doing thread-safe multi-lock test.  This test should pass and not deadlock." << endl;
-    ::system( "pause" );
-    for ( unsigned int ii = 0; ii < threadCount; ++ii )
     {
-        void * p = reinterpret_cast< void * >( ii );
-        pool.Start( MultiLockSafeThread, p );
+        ThreadPool pool( threadCount );
+        cout << endl << "Doing thread-safe multi-lock test.  This test should pass and not deadlock." << endl;
+        cout << "Press <Enter> key to start test. ";
+        cin.get( ender );
+        for ( uintptr_t ii = 0; ii < threadCount; ++ii )
+        {
+            void * p = reinterpret_cast< void * >( ii );
+            pool.Start( MultiLockSafeThread, p );
+        }
+        pool.JoinAll();
+        TestResults::GetIt()->OutputResults();
     }
-    pool.JoinAll();
-    TestResults::GetIt()->OutputResults();
 
-    cout << endl << "Doing thread-unsafe multi-lock test.  This test may fail." << endl;
-    TestResults::GetIt()->Reset( threadCount );
-    ::system( "pause" );
-    for ( unsigned int ii = 0; ii < threadCount; ++ii )
     {
-        void * p = reinterpret_cast< void * >( ii );
-        pool.Start( MultiLockUnsafeThread, p );
+        ThreadPool pool( threadCount );
+        cout << endl << "Doing thread-unsafe multi-lock test.  This test may fail." << endl;
+        TestResults::GetIt()->Reset( threadCount );
+        cout << "Press <Enter> key to start test. ";
+        cin.get( ender );
+        for ( uintptr_t ii = 0; ii < threadCount; ++ii )
+        {
+            void * p = reinterpret_cast< void * >( ii );
+            pool.Start( MultiLockUnsafeThread, p );
+        }
+        pool.JoinAll();
+        TestResults::GetIt()->OutputResults();
     }
-    pool.JoinAll();
-    TestResults::GetIt()->OutputResults();
 
     TestResults::Destroy();
     Thing::DestroyPool();
+
+    cout << "Finished MultiThreadMultiLockTest." << endl;
 }
 
 // ----------------------------------------------------------------------------
 
 void * MultiLockRandomSafeThread( void * p )
 {
-    const unsigned int value = reinterpret_cast< unsigned int >( p );
+    const uintptr_t value = reinterpret_cast< uintptr_t >( p );
     unsigned int testCount = 0;
     unsigned int failCount = 0;
     volatile Thing * thing = nullptr;
@@ -706,7 +751,7 @@ void * MultiLockRandomSafeThread( void * p )
                 assert( nullptr != thing );
                 pool.push_back( thing );
             }
-            const unsigned int poolCount = pool.size();
+            const size_t poolCount = pool.size();
 
             mutexes.clear();
             for ( jj = 0; jj < poolCount; ++jj )
@@ -750,7 +795,7 @@ void * MultiLockRandomSafeThread( void * p )
 
 void * MultiLockRandomUnsafeThread( void * p )
 {
-    const unsigned int value = reinterpret_cast< unsigned int >( p );
+    const uintptr_t value = reinterpret_cast< uintptr_t >( p );
     unsigned int testCount = 0;
     unsigned int failCount = 0;
     Thing * thing = nullptr;
@@ -770,11 +815,11 @@ void * MultiLockRandomUnsafeThread( void * p )
                 place += ::rand() % 3;
                 if ( thingCount <= place )
                     break;
-                thing = thing = const_cast< Thing * >( Thing::GetFromPool( place ) );
+                thing = const_cast< Thing * >( Thing::GetFromPool( place ) );
                 assert( nullptr != thing );
                 pool.push_back( thing );
             }
-            const unsigned int poolCount = pool.size();
+            const size_t poolCount = pool.size();
 
             for ( jj = 0; jj < poolCount; ++jj )
             {
@@ -808,34 +853,46 @@ void * MultiLockRandomUnsafeThread( void * p )
 
 void MultiThreadRandomMultiLockTest( void )
 {
+    cout << "Starting MultiThreadRandomMultiLockTest." << endl;
+
+    char ender;
     Thing::MakePool( thingCount );
-    const unsigned int threadCount = 8;
+    const uintptr_t threadCount = 8;
     TestResults::Create( threadCount );
-    ThreadPool pool( threadCount );
 
-    cout << endl << "Doing thread-safe random multi-lock test.  This test should pass and not deadlock." << endl;
-    ::system( "pause" );
-    for ( unsigned int ii = 0; ii < threadCount; ++ii )
     {
-        void * p = reinterpret_cast< void * >( ii );
-        pool.Start( MultiLockRandomSafeThread, p );
+        ThreadPool pool( threadCount );
+        cout << endl << "Doing thread-safe random multi-lock test.  This test should pass and not deadlock." << endl;
+        cout << "Press <Enter> key to start test. ";
+        cin.get( ender );
+        for ( uintptr_t ii = 0; ii < threadCount; ++ii )
+        {
+            void * p = reinterpret_cast< void * >( ii );
+            pool.Start( MultiLockRandomSafeThread, p );
+        }
+        pool.JoinAll();
+        TestResults::GetIt()->OutputResults();
     }
-    pool.JoinAll();
-    TestResults::GetIt()->OutputResults();
 
-    cout << endl << "Doing thread-unsafe random multi-lock test.  This test may fail." << endl;
-    TestResults::GetIt()->Reset( threadCount );
-    ::system( "pause" );
-    for ( unsigned int ii = 0; ii < threadCount; ++ii )
     {
-        void * p = reinterpret_cast< void * >( ii );
-        pool.Start( MultiLockRandomUnsafeThread, p );
+        ThreadPool pool( threadCount );
+        cout << endl << "Doing thread-unsafe random multi-lock test.  This test may fail." << endl;
+        TestResults::GetIt()->Reset( threadCount );
+        cout << "Press <Enter> key to start test. ";
+        cin.get( ender );
+        for ( uintptr_t ii = 0; ii < threadCount; ++ii )
+        {
+            void * p = reinterpret_cast< void * >( ii );
+            pool.Start( MultiLockRandomUnsafeThread, p );
+        }
+        pool.JoinAll();
+        TestResults::GetIt()->OutputResults();
     }
-    pool.JoinAll();
-    TestResults::GetIt()->OutputResults();
 
     TestResults::Destroy();
     Thing::DestroyPool();
+
+    cout << "Finished MultiThreadRandomMultiLockTest." << endl;
 }
 
 // ----------------------------------------------------------------------------
@@ -843,7 +900,7 @@ void MultiThreadRandomMultiLockTest( void )
 void * SafeHierarchyTest( void * p )
 {
 
-    const unsigned int value = reinterpret_cast< unsigned int >( p );
+    const uintptr_t value = reinterpret_cast< uintptr_t >( p );
     volatile LevelThing * thing = nullptr;
     unsigned int testCount = 0;
     unsigned int failCount = 0;
@@ -855,7 +912,7 @@ void * SafeHierarchyTest( void * p )
             {
                 thing = LevelThing::GetFromPool( ii );
                 assert( nullptr != thing );
-                LevelThing::Unlocker unlocker( thing->LockHierarchy() );
+                LevelThing::MyUnlocker unlocker( thing->LockHierarchy() );
                 (void)unlocker;
                 thing->SetValue( value );
                 ::GoToSleep( 3 );
@@ -867,7 +924,7 @@ void * SafeHierarchyTest( void * p )
                 const unsigned int randomIndex = ( ::rand() % thingCount );
                 thing = LevelThing::GetFromPool( randomIndex );
                 assert( nullptr != thing );
-                LevelThing::Unlocker unlocker( thing->LockHierarchy() );
+                LevelThing::MyUnlocker unlocker( thing->LockHierarchy() );
                 (void)unlocker;
                 thing->SetValue( value );
                 ::GoToSleep( 3 );
@@ -892,7 +949,7 @@ void * SafeHierarchyTest( void * p )
 void * UnsafeHierarchyTest( void * p )
 {
 
-    const unsigned int value = reinterpret_cast< unsigned int >( p );
+    const uintptr_t value = reinterpret_cast< uintptr_t >( p );
     LevelThing * thing = nullptr;
     unsigned int testCount = 0;
     unsigned int failCount = 0;
@@ -936,34 +993,46 @@ void * UnsafeHierarchyTest( void * p )
 
 void MultiThreadHierarchySingleLockTest( void )
 {
+    cout << "Starting MultiThreadHierarchySingleLockTest." << endl;
+
+    char ender;
     LevelThing::MakePool( thingCount );
-    const unsigned int threadCount = 8;
+    const uintptr_t threadCount = 8;
     TestResults::Create( threadCount );
-    ThreadPool pool( threadCount );
 
-    cout << endl << "Doing thread-safe hierarchy test.  This test should pass and not deadlock." << endl;
-    ::system( "pause" );
-    for ( unsigned int ii = 0; ii < threadCount; ++ii )
     {
-        void * p = reinterpret_cast< void * >( ii );
-        pool.Start( SafeHierarchyTest, p );
+        ThreadPool pool( threadCount );
+        cout << endl << "Doing thread-safe hierarchy test.  This test should pass and not deadlock." << endl;
+        cout << "Press <Enter> key to start test. ";
+        cin.get( ender );
+        for ( uintptr_t ii = 0; ii < threadCount; ++ii )
+        {
+            void * p = reinterpret_cast< void * >( ii );
+            pool.Start( SafeHierarchyTest, p );
+        }
+        pool.JoinAll();
+        TestResults::GetIt()->OutputResults();
     }
-    pool.JoinAll();
-    TestResults::GetIt()->OutputResults();
 
-    cout << endl << "Doing thread-unsafe hierarchy test.  This test may fail." << endl;
-    ::system( "pause" );
-    TestResults::GetIt()->Reset( threadCount );
-    for ( unsigned int ii = 0; ii < threadCount; ++ii )
     {
-        void * p = reinterpret_cast< void * >( ii );
-        pool.Start( UnsafeHierarchyTest, p );
+        ThreadPool pool( threadCount );
+        cout << endl << "Doing thread-unsafe hierarchy test.  This test may fail." << endl;
+        cout << "Press <Enter> key to start test. ";
+        cin.get( ender );
+        TestResults::GetIt()->Reset( threadCount );
+        for ( uintptr_t ii = 0; ii < threadCount; ++ii )
+        {
+            void * p = reinterpret_cast< void * >( ii );
+            pool.Start( UnsafeHierarchyTest, p );
+        }
+        pool.JoinAll();
+        TestResults::GetIt()->OutputResults();
     }
-    pool.JoinAll();
-    TestResults::GetIt()->OutputResults();
 
     TestResults::Destroy();
     LevelThing::DestroyPool();
+
+    cout << "Finished MultiThreadHierarchySingleLockTest." << endl;
 }
 
 // ----------------------------------------------------------------------------
@@ -971,7 +1040,7 @@ void MultiThreadHierarchySingleLockTest( void )
 void * SafeHierarchyMultiLockTest( void * p )
 {
 
-    const unsigned int value = reinterpret_cast< unsigned int >( p );
+    const uintptr_t value = reinterpret_cast< uintptr_t >( p );
     unsigned int testCount = 0;
     unsigned int failCount = 0;
     unsigned int totalTestCount = 0;
@@ -1022,7 +1091,7 @@ void * SafeHierarchyMultiLockTest( void * p )
 void * UnsafeHierarchyMultiLockTest( void * p )
 {
 
-    const unsigned int value = reinterpret_cast< unsigned int >( p );
+    const uintptr_t value = reinterpret_cast< uintptr_t >( p );
     unsigned int testCount = 0;
     unsigned int failCount = 0;
     unsigned int totalTestCount = 0;
@@ -1064,35 +1133,46 @@ void * UnsafeHierarchyMultiLockTest( void * p )
 
 void MultiThreadHierarchyMultiLockTest( void )
 {
+    cout << "Starting MultiThreadHierarchyMultiLockTest." << endl;
 
+    char ender;
     MultiLevelPool::MakePool( 10, thingCount );
-    const unsigned int threadCount = 8;
+    const uintptr_t threadCount = 8;
     TestResults::Create( threadCount );
-    ThreadPool pool( threadCount );
 
-    cout << endl << "Doing thread-safe multilock hierarchy test.  This test should pass and not deadlock." << endl;
-    ::system( "pause" );
-    for ( unsigned int ii = 0; ii < threadCount; ++ii )
     {
-        void * p = reinterpret_cast< void * >( ii );
-        pool.Start( SafeHierarchyMultiLockTest, p );
+        ThreadPool pool( threadCount );
+        cout << endl << "Doing thread-safe multilock hierarchy test.  This test should pass and not deadlock." << endl;
+        cout << "Press <Enter> key to start test. ";
+        cin.get( ender );
+        for ( uintptr_t ii = 0; ii < threadCount; ++ii )
+        {
+            void * p = reinterpret_cast< void * >( ii );
+            pool.Start( SafeHierarchyMultiLockTest, p );
+        }
+        pool.JoinAll();
+        TestResults::GetIt()->OutputResults();
     }
-    pool.JoinAll();
-    TestResults::GetIt()->OutputResults();
 
-    cout << endl << "Doing thread-unsafe multilock hierarchy test.  This test may fail." << endl;
-    ::system( "pause" );
-    TestResults::GetIt()->Reset( threadCount );
-    for ( unsigned int ii = 0; ii < threadCount; ++ii )
     {
-        void * p = reinterpret_cast< void * >( ii );
-        pool.Start( UnsafeHierarchyMultiLockTest, p );
+        ThreadPool pool( threadCount );
+        cout << endl << "Doing thread-unsafe multilock hierarchy test.  This test may fail." << endl;
+        cout << "Press <Enter> key to start test. ";
+        cin.get( ender );
+        TestResults::GetIt()->Reset( threadCount );
+        for ( uintptr_t ii = 0; ii < threadCount; ++ii )
+        {
+            void * p = reinterpret_cast< void * >( ii );
+            pool.Start( UnsafeHierarchyMultiLockTest, p );
+        }
+        pool.JoinAll();
+        TestResults::GetIt()->OutputResults();
     }
-    pool.JoinAll();
-    TestResults::GetIt()->OutputResults();
 
     TestResults::Destroy();
     MultiLevelPool::DestroyPool();
+
+    cout << "Finished MultiThreadHierarchyMultiLockTest." << endl;
 }
 
 // ----------------------------------------------------------------------------

@@ -3,23 +3,38 @@
 // Copyright (c) 2001 by Andrei Alexandrescu
 // Copyright (c) 2006 Richard Sposato
 // This code accompanies the book:
-// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design 
+// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design
 //     Patterns Applied". Copyright (c) 2001. Addison-Wesley.
-// Permission to use, copy, modify, distribute and sell this software for any 
-//     purpose is hereby granted without fee, provided that the above  copyright 
-//     notice appear in all copies and that both that copyright notice and this 
-//     permission notice appear in supporting documentation.
-// The author or Addison-Wesley Longman make no representations about the 
-//     suitability of this software for any purpose. It is provided "as is" 
-//     without express or implied warranty.
+// Code covered by the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: SmartPtr.cpp 756 2006-10-17 20:05:42Z syntheticpp $
+// $Id: SmartPtr.cpp 1116 2011-09-23 00:46:54Z rich_sposato $
 
 
 #include <loki/SmartPtr.h>
 
 #include <cassert>
+
+#include <stdexcept>
+#include <string>
 
 //#define DO_EXTRA_LOKI_TESTS
 #ifdef DO_EXTRA_LOKI_TESTS
@@ -37,10 +52,49 @@ namespace Private
 
 // ----------------------------------------------------------------------------
 
-RefLinkedBase::RefLinkedBase(const RefLinkedBase& rhs) 
+void DeleteArrayBase::Swap( DeleteArrayBase & rhs )
 {
-    prev_ = &rhs;
-    next_ = rhs.next_;
+    assert( NULL != this );
+
+    const size_t temp = m_itemCount;
+    m_itemCount = rhs.m_itemCount;
+    rhs.m_itemCount = temp;
+}
+
+// ----------------------------------------------------------------------------
+
+void DeleteArrayBase::OnInit( const void * p ) const
+{
+    assert( NULL != this );
+    if ( NULL == p )
+    {
+        assert( 0 == m_itemCount );
+    }
+    else
+    {
+        assert( 0 < m_itemCount );
+    }
+}
+
+// ----------------------------------------------------------------------------
+
+void DeleteArrayBase::OnCheckRange( size_t index ) const
+{
+    assert( NULL != this );
+
+    if ( index < m_itemCount )
+        return;
+
+    const ::std::string message( "index out of range in ::Loki::DeleteArrayBase::OnCheckRange" );
+    throw ::std::out_of_range( message );
+}
+
+// ----------------------------------------------------------------------------
+
+RefLinkedBase::RefLinkedBase( const RefLinkedBase & rhs ) :
+    prev_( &rhs ),
+    next_( rhs.next_ )
+{
     prev_->next_ = this;
     next_->prev_ = this;
 
@@ -70,7 +124,7 @@ bool RefLinkedBase::Release()
         return false;
     }
     else if (next_ == this)
-    {   
+    {
         assert(prev_ == this);
         // Set these to NULL to prevent re-entrancy.
         prev_ = NULL;

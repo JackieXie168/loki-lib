@@ -40,10 +40,13 @@
  for how well your compiler can handle Loki.
  */
 
-// $Id: DefaultAlloc.cpp 761 2006-10-17 20:48:18Z syntheticpp $
+// $Id: DefaultAlloc.cpp 1030 2009-10-10 23:09:23Z rich_sposato $
 
 
 // ----------------------------------------------------------------------------
+
+#include <stdio.h>
+#include <string.h>
 
 #include <iostream>
 #include <new>
@@ -410,6 +413,58 @@ void Bee::OutputArraySizeInfo( void )
 
 // ----------------------------------------------------------------------------
 
+const char * GetGnuVersion( void )
+{
+#if defined( __GNUC__ )
+    const unsigned int major = __GNUC__;
+
+    #if defined( __GNUC_MINOR__ )
+        const unsigned int minor = __GNUC_MINOR__;
+    #else
+        const unsigned int minor = 0;
+    #endif
+
+    #if defined( __GNUC_PATCHLEVEL__ )
+        const unsigned int patch = __GNUC_PATCHLEVEL__;
+    #else
+        const unsigned int patch = 0;
+    #endif
+
+    static char buffer[ 64 ];
+    sprintf( buffer, "GNU version %d.%d.%d", major, minor, patch );
+    return buffer;
+
+#else
+    return "not a GNU compiler";
+#endif
+}
+
+// ----------------------------------------------------------------------------
+
+const char * GetMsvcVersion( void )
+{
+#if !defined( _MSC_VER )
+    return "not Microsoft compiler";
+
+#elif (_MSC_VER >= 1500)
+    return "Microsoft 9.0 or higher";
+
+#elif (_MSC_VER >= 1400)
+    return "Microsoft 8";
+
+#elif (_MSC_VER >= 1300)
+    return "Microsoft 7";
+
+#elif (_MSC_VER >= 1200)
+    return "Microsoft 6";
+
+#elif (_MSC_VER)
+    return "Microsoft, but a version lower than 6";
+#endif
+}
+
+// ----------------------------------------------------------------------------
+
 const char * GetCompilerName( void )
 {
     /** @note This list of predefined compiler version macros comes from
@@ -462,7 +517,7 @@ const char * GetCompilerName( void )
     return "EDG C++ Front End";
 
 #elif (__GNUC__)
-    return "Gnu C/C++";
+    return GetGnuVersion();
 
 #elif (__HP_cc)
     return "HP ANSI C/aC++";
@@ -545,17 +600,8 @@ const char * GetCompilerName( void )
 #elif (__BORLANDC__)
     return "Borland C++";
 
-#elif (_MSC_VER >= 1400)
-    return "Microsoft 8.0 or higher";
-
-#elif (_MSC_VER >= 1300)
-    return "Microsoft 7";
-
-#elif (_MSC_VER >= 1200)
-    return "Microsoft 6";
-
 #elif (_MSC_VER)
-    return "Microsoft, but a version lower than 6";
+    return GetMsvcVersion();
 
 #else
     return "an Unknown type";
@@ -708,11 +754,11 @@ void RunTests( void )
 
 // ----------------------------------------------------------------------------
 
-int main( unsigned int argc, const char * const argv[] )
+int main( int argc, const char * const argv[] )
 {
 
     bool caught = false;
-    for ( unsigned int aa = 1; aa < argc; ++aa )
+    for ( int aa = 1; aa < argc; ++aa )
     {
         if ( ::strcmp( argv[aa], "-v" ) == 0 )
             s_verbose = true;

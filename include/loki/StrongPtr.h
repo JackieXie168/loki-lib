@@ -1,25 +1,40 @@
 ////////////////////////////////////////////////////////////////////////////////
 // The Loki Library
 // Copyright (c) 2006 Rich Sposato
-// The copyright on this file is protected under the terms of the MIT license.
+// Code covered by the MIT License
 //
-// Permission to use, copy, modify, distribute and sell this software for any
-//     purpose is hereby granted without fee, provided that the above copyright
-//     notice appear in all copies and that both that copyright notice and this
-//     permission notice appear in supporting documentation.
-// The author makes no representations about the
-//     suitability of this software for any purpose. It is provided "as is"
-//     without express or implied warranty.
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 #ifndef LOKI_STRONG_PTR_INC_
 #define LOKI_STRONG_PTR_INC_
 
-// $Id: StrongPtr.h 914 2008-12-19 00:39:29Z rich_sposato $
+// $Id: StrongPtr.h 1117 2011-09-29 19:56:39Z syntheticpp $
 
 
 #include <loki/SmartPtr.h>
 #if defined (LOKI_OBJECT_LEVEL_THREADING) || defined (LOKI_CLASS_LEVEL_THREADING)
     #include <loki/Threads.h>
+#endif
+
+#if defined( _MSC_VER )
+    #pragma warning( push )
+    #pragma warning( disable: 4355 )
 #endif
 
 
@@ -53,9 +68,9 @@
 ///   -# explicit YourPolicy( bool strong )
 ///   -# YourPolicy( void * p, bool strong )
 ///   -# YourPolicy( const YourPolicy & rhs, bool strong )
+///   -# YourPolicy( const YourPolicy & rhs, bool isNull, bool strong )
+///   -# ~YourPolicy( void )
 ///   -# bool Release( bool strong )
-///   -# void Increment( bool strong )
-///   -# bool Decrement( bool strong )
 ///   -# bool HasStrongPointer( void ) const
 ///   -# void Swap( YourPolicy & rhs )
 ///   -# void SetPointer( void * p )
@@ -80,7 +95,10 @@
 ///   If you write your own policy, you must implement these 3 functions:
 ///   -# void static Delete( const P * p )
 ///   -# static P * Default( void )
-///   -# void Swap( YourResetPolicy & )
+///   -# Default constructor.
+///   -# Copy constructor.
+///   -# Templated copy constructor.
+///   -# void Swap( YourDeletePolicy & )
 ///
 ///  \par ResetPolicy
 ///   A reset policy tells the ReleaseAll and ResetAll functions whether they
@@ -95,11 +113,11 @@
 ///
 ///  \par Writing Your Own ResetPolicy
 ///   If you write your own policy, you must implement these 2 functions:
-///   -# bool OnReleaseAll( bool ) const
-///   -# bool OnResetAll( bool ) const
-///   The bool parameter means that this was called with a strong pointer or
-///   one of its copointers is strong.  The return value means the pointer
-///   can be reset or released.
+///   -# bool OnReleaseAll( bool, bool ) const
+///   -# bool OnResetAll( bool, bool ) const
+///   The first bool parameter is true if the pointer which called the function
+///   is strong.  The second parameter is true if any copointer is strong.  The
+///   return value means the pointer can be reset or released.
 ///
 ///  \defgroup  StrongPointerOwnershipGroup StrongPtr Ownership policies
 ///  \ingroup   SmartPointerGroup
@@ -112,6 +130,9 @@
 
 namespace Loki
 {
+
+static const char * const StrongPtr_Single_Owner_Exception_Message =
+    "Object has more than one Owner - which violates the single owner policy for StrongPtr!";
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -126,7 +147,15 @@ namespace Loki
 template < class P >
 class DeleteUsingFree
 {
-public:
+protected:
+
+    inline DeleteUsingFree( void ) {}
+
+    inline DeleteUsingFree( const DeleteUsingFree & ) {}
+
+    template < class P1 >
+    inline DeleteUsingFree( const DeleteUsingFree< P1 > & ) {}
+
     inline void static Delete( const P * p )
     {
         if ( 0 != p )
@@ -157,7 +186,15 @@ public:
 template < class P >
 class DeleteNothing
 {
-public:
+protected:
+
+    inline DeleteNothing( void ) {}
+
+    inline DeleteNothing( const DeleteNothing & ) {}
+
+    template < class P1 >
+    inline DeleteNothing( const DeleteNothing< P1 > & ) {}
+
     inline static void Delete( const P * )
     {
         // Do nothing at all!
@@ -169,6 +206,7 @@ public:
     }
 
     inline void Swap( DeleteNothing & ) {}
+
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -182,7 +220,15 @@ public:
 template < class P >
 class DeleteSingle
 {
-public:
+protected:
+
+    inline DeleteSingle( void ) {}
+
+    inline DeleteSingle( const DeleteSingle & ) {}
+
+    template < class P1 >
+    inline DeleteSingle( const DeleteSingle< P1 > & ) {}
+
     inline static void Delete( const P * p )
     {
         /** @note If you see an error message about a negative subscript, that
@@ -211,9 +257,19 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 
 template < class P >
-class DeleteArray
+class DeleteArray : public ::Loki::Private::DeleteArrayBase
 {
 public:
+
+    DeleteArray( void ) : DeleteArrayBase() {}
+
+    explicit DeleteArray( size_t itemCount ) : DeleteArrayBase( itemCount ) {}
+
+    DeleteArray( const DeleteArray & that ) : DeleteArrayBase( that ) {}
+
+    template < class P1 >
+    inline DeleteArray( const DeleteArray< P1 > & that ) : DeleteArrayBase( that ) {}
+
     inline static void Delete( const P * p )
     {
         /** @note If you see an error message about a negative subscript, that
@@ -230,7 +286,6 @@ public:
         return 0;
     }
 
-    inline void Swap( DeleteArray & ) {}
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -245,14 +300,41 @@ public:
 template < class P >
 struct CantResetWithStrong
 {
-    inline bool OnReleaseAll( bool hasStrongPtr ) const
+    inline bool OnReleaseAll( bool isThisStrong, bool isAnyStrong ) const
     {
-        return ! hasStrongPtr;
+        (void)isThisStrong;
+        return ! isAnyStrong;
     }
 
-    inline bool OnResetAll( bool hasStrongPtr ) const
+    inline bool OnResetAll( bool isThisStrong, bool isAnyStrong ) const
     {
-        return ! hasStrongPtr;
+        (void)isThisStrong;
+        return ! isAnyStrong;
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+///  \class OnlyStrongMayReset
+///
+///  \ingroup  StrongPointerResetGroup
+///  Implementation of the ResetPolicy used by StrongPtr.  It only allows a
+///  a strong co-pointer to reset or release.  This policy was made for use with
+///  the single-owner policies.
+////////////////////////////////////////////////////////////////////////////////
+
+template < class P >
+struct OnlyStrongMayReset
+{
+    inline bool OnReleaseAll( bool isThisStrong, bool isAnyStrong ) const
+    {
+        (void)isAnyStrong;
+        return isThisStrong;
+    }
+
+    inline bool OnResetAll( bool isThisStrong, bool isAnyStrong ) const
+    {
+        (void)isAnyStrong;
+        return isThisStrong;
     }
 };
 
@@ -267,12 +349,16 @@ struct CantResetWithStrong
 template < class P >
 struct AllowReset
 {
-    inline bool OnReleaseAll( bool ) const
+    inline bool OnReleaseAll( bool isThisStrong, bool isAnyStrong ) const
     {
+        (void)isThisStrong;
+        (void)isAnyStrong;
         return true;
     }
-    inline bool OnResetAll( bool ) const
+    inline bool OnResetAll( bool isThisStrong, bool isAnyStrong ) const
     {
+        (void)isThisStrong;
+        (void)isAnyStrong;
         return true;
     }
 };
@@ -288,17 +374,25 @@ struct AllowReset
 template < class P >
 struct NeverReset
 {
-    inline bool OnReleaseAll( bool ) const
+    inline bool OnReleaseAll( bool isThisStrong, bool isAnyStrong ) const
     {
+        (void)isThisStrong;
+        (void)isAnyStrong;
         return false;
     }
-    inline bool OnResetAll( bool ) const
+    inline bool OnResetAll( bool isThisStrong, bool isAnyStrong ) const
     {
+        (void)isThisStrong;
+        (void)isAnyStrong;
         return false;
     }
 };
 
 // ----------------------------------------------------------------------------
+
+// Forward declaration needed for pointer to single-owner strong pointer.
+class SingleOwnerRefCount;
+class Lockable1OwnerRefCount;
 
 namespace Private
 {
@@ -394,6 +488,8 @@ public:
     }
 
 private:
+    /// Default constructor not implemented.
+    TwoRefCountInfo( void );
     /// Copy-constructor not implemented.
     TwoRefCountInfo( const TwoRefCountInfo & );
     /// Copy-assignment operator not implemented.
@@ -403,6 +499,105 @@ private:
     unsigned int m_strongCount;
     unsigned int m_weakCount;
 };
+
+////////////////////////////////////////////////////////////////////////////////
+///  \class OneOwnerRefCountInfo
+///
+///  \ingroup  StrongPointerOwnershipGroup
+///   Implementation detail for reference counting strong and weak pointers.
+///   It maintains a void pointer and 2 reference counts.  Since it is just a
+///   class for managing implementation details, it is not intended to be used
+///   directly - which is why it is in a private namespace.  Each instance is a
+///   shared resource for all copointers, and there should be only one of these
+///   for each set of copointers.  This class is small, trivial, and inline.
+////////////////////////////////////////////////////////////////////////////////
+
+class LOKI_EXPORT OneOwnerRefCountInfo
+{
+public:
+
+    explicit OneOwnerRefCountInfo( SingleOwnerRefCount * ptr );
+
+    OneOwnerRefCountInfo( const void * p, SingleOwnerRefCount * ptr );
+
+    inline ~OneOwnerRefCountInfo( void )
+    {
+        assert( NULL == m_strongPtr );
+        assert( 0 == m_weakCount );
+    }
+
+    inline bool HasStrongPointer( void ) const
+    {
+        return ( NULL != m_strongPtr );
+    }
+
+    inline const SingleOwnerRefCount * GetStrongCoPointer( void ) const
+    {
+        return m_strongPtr;
+    }
+
+    inline SingleOwnerRefCount * GetStrongCoPointer( void )
+    {
+        return m_strongPtr;
+    }
+
+    void SetStrongCoPtr( SingleOwnerRefCount * ptr );
+
+    inline bool HasWeakPointer( void ) const
+    {
+        return ( 0 < m_weakCount );
+    }
+
+    inline unsigned int GetWeakCount( void ) const
+    {
+        return m_weakCount;
+    }
+
+    inline void IncWeakCount( void )
+    {
+        ++m_weakCount;
+    }
+
+    inline void DecWeakCount( void )
+    {
+        assert( 0 < m_weakCount );
+        --m_weakCount;
+    }
+
+    inline void ZapPointer( void )
+    {
+        m_pointer = NULL;
+    }
+
+    void SetPointer( void * p )
+    {
+        m_pointer = p;
+    }
+
+    inline void * GetPointer( void ) const
+    {
+        return const_cast< void * >( m_pointer );
+    }
+
+    inline void * & GetPointerRef( void ) const
+    {
+        return const_cast< void * & >( m_pointer );
+    }
+
+private:
+    /// Default constructor not implemented.
+    OneOwnerRefCountInfo( void );
+    /// Copy constructor not implemented.
+    OneOwnerRefCountInfo( const OneOwnerRefCountInfo & );
+    /// Copy-assignment operator not implemented.
+    OneOwnerRefCountInfo & operator = ( const OneOwnerRefCountInfo & );
+
+    const void * m_pointer;
+    SingleOwnerRefCount * m_strongPtr;
+    unsigned int m_weakCount;
+};
+
+#if defined (LOKI_OBJECT_LEVEL_THREADING) || defined (LOKI_CLASS_LEVEL_THREADING)
 
 ////////////////////////////////////////////////////////////////////////////////
 ///  \class LockableTwoRefCountInfo
@@ -421,8 +616,6 @@ private:
 ///   multi-threaded model with either class-level-locking or object-level-locking
 ///   do run properly.
 ////////////////////////////////////////////////////////////////////////////////
-
-#if defined (LOKI_OBJECT_LEVEL_THREADING) || defined (LOKI_CLASS_LEVEL_THREADING)
 
 class LOKI_EXPORT LockableTwoRefCountInfo
     : private Loki::Private::TwoRefCountInfo
@@ -535,6 +728,154 @@ private:
     mutable LOKI_DEFAULT_MUTEX m_Mutex;
 };
 
+////////////////////////////////////////////////////////////////////////////////
+///  \class Lockable1OwnerRefCountInfo
+///
+///  \ingroup  StrongPointerOwnershipGroup
+///   Implementation detail for thread-safe reference counting for 1 strong and
+///   multiple weak pointers.  It uses OneOwnerRefCountInfo to manage the pointers
+///   and count.  All this does is provide a thread safety mechanism.  Since it
+///   is just a class for managing implementation details, it is not intended to
+///   be used directly - which is why it is in a private namespace.  Each instance
+///   is a shared resource for all copointers, and there should be only one of
+///   these for each set of copointers.  This class is small, trivial, and inline.
+///
+///  \note This class is not designed for use with a single-threaded model.
+///   Tests using a single-threaded model will not run properly, but tests in a
+///   multi-threaded model with either class-level-locking or object-level-locking
+///   do run properly.
+////////////////////////////////////////////////////////////////////////////////
+
+class LOKI_EXPORT Lockable1OwnerRefCountInfo
+    : private Loki::Private::OneOwnerRefCountInfo
+{
+public:
+
+    explicit Lockable1OwnerRefCountInfo( Lockable1OwnerRefCount * ptr )
+        : OneOwnerRefCountInfo( reinterpret_cast< SingleOwnerRefCount * >( ptr ) )
+        , m_Mutex()
+    {
+    }
+
+    Lockable1OwnerRefCountInfo( const void * p, Lockable1OwnerRefCount * ptr )
+        : OneOwnerRefCountInfo( p,
+            reinterpret_cast< SingleOwnerRefCount * >( ptr ) )
+        , m_Mutex()
+    {
+    }
+
+    inline ~Lockable1OwnerRefCountInfo( void )
+    {
+    }
+
+    inline void Lock( void ) const
+    {
+        m_Mutex.Lock();
+    }
+
+    inline void Unlock( void ) const
+    {
+        m_Mutex.Unlock();
+    }
+
+    inline const Lockable1OwnerRefCount * GetStrongCoPointer( void ) const
+    {
+        m_Mutex.Lock();
+        const SingleOwnerRefCount * ptr =
+            OneOwnerRefCountInfo::GetStrongCoPointer();
+        m_Mutex.Unlock();
+        return reinterpret_cast< const Lockable1OwnerRefCount * >( ptr );
+    }
+
+    inline Lockable1OwnerRefCount * GetStrongCoPointer( void )
+    {
+        m_Mutex.Lock();
+        SingleOwnerRefCount * ptr = OneOwnerRefCountInfo::GetStrongCoPointer();
+        m_Mutex.Unlock();
+        return reinterpret_cast< Lockable1OwnerRefCount * >( ptr );
+    }
+
+    inline void SetStrongCoPtr( Lockable1OwnerRefCount * ptr )
+    {
+        m_Mutex.Lock();
+        SingleOwnerRefCount * p = reinterpret_cast< SingleOwnerRefCount * >( ptr );
+        OneOwnerRefCountInfo::SetStrongCoPtr( p );
+        m_Mutex.Unlock();
+    }
+
+    inline bool HasStrongPointer( void ) const
+    {
+        m_Mutex.Lock();
+        const bool has = OneOwnerRefCountInfo::HasStrongPointer();
+        m_Mutex.Unlock();
+        return has;
+    }
+
+    inline unsigned int GetWeakCount( void ) const
+    {
+        m_Mutex.Lock();
+        const unsigned int weakCount = OneOwnerRefCountInfo::HasWeakPointer();
+        m_Mutex.Unlock();
+        return weakCount;
+    }
+
+    inline bool HasWeakPointer( void ) const
+    {
+        m_Mutex.Lock();
+        const bool has = OneOwnerRefCountInfo::HasWeakPointer();
+        m_Mutex.Unlock();
+        return has;
+    }
+
+    inline void IncWeakCount( void )
+    {
+        m_Mutex.Lock();
+        OneOwnerRefCountInfo::IncWeakCount();
+        m_Mutex.Unlock();
+    }
+
+    inline void DecWeakCount( void )
+    {
+        m_Mutex.Lock();
+        OneOwnerRefCountInfo::DecWeakCount();
+        m_Mutex.Unlock();
+    }
+
+    inline void ZapPointer( void )
+    {
+        m_Mutex.Lock();
+        OneOwnerRefCountInfo::ZapPointer();
+        m_Mutex.Unlock();
+    }
+
+    void SetPointer( void * p )
+    {
+        m_Mutex.Lock();
+        OneOwnerRefCountInfo::SetPointer( p );
+        m_Mutex.Unlock();
+    }
+
+    inline void * GetPointer( void ) const
+    {
+        return OneOwnerRefCountInfo::GetPointer();
+    }
+
+    inline void * & GetPointerRef( void ) const
+    {
+        return OneOwnerRefCountInfo::GetPointerRef();
+    }
+
+private:
+    /// Default constructor is not available.
+    Lockable1OwnerRefCountInfo( void );
+    /// Copy constructor is not available.
+    Lockable1OwnerRefCountInfo( const Lockable1OwnerRefCountInfo & );
+    /// Copy-assignment operator is not available.
+    Lockable1OwnerRefCountInfo & operator = ( const Lockable1OwnerRefCountInfo & );
+
+    mutable LOKI_DEFAULT_MUTEX m_Mutex;
+};
+
 #endif // if object-level-locking or class-level-locking
 
 } // end namespace Private
@@ -564,6 +905,8 @@ protected:
         Increment( strong );
     }
 
+    TwoRefCounts( const TwoRefCounts & rhs, bool isNull, bool strong );
+
     /** The destructor does not need to do anything since the call to
      ZapPointer inside StrongPtr::~StrongPtr will do the cleanup which
      this dtor would have done.
@@ -575,7 +918,7 @@ protected:
         return Decrement( strong );
     }
 
-    bool HasStrongPointer( void ) const
+    inline bool HasStrongPointer( void ) const
     {
         return m_counts->HasStrongPointer();
     }
@@ -600,7 +943,12 @@ protected:
     }
 
 private:
+
+    /// Default constructor is not implemented.
     TwoRefCounts( void );
+    /// Copy constructor is not implemented.
+    TwoRefCounts( const TwoRefCounts & );
+    /// Copy-assignment operator is not implemented.
     TwoRefCounts & operator = ( const TwoRefCounts & );
 
     void Increment( bool strong );
@@ -610,6 +958,93 @@ private:
     /// Pointer to all shared data.
     Loki::Private::TwoRefCountInfo * m_counts;
 };
+
+////////////////////////////////////////////////////////////////////////////////
+///  \class SingleOwnerRefCount
+///
+///  \ingroup  StrongPointerOwnershipGroup
+///   This implementation of StrongPtr's OwnershipPolicy extends the ownership
+///   policy class, TwoRefCounts, to enforce that only one StrongPtr may "own" a
+///   resource.  The resource is destroyed only when its sole owner dies even if
+///   weak pointers access it.  The constructors enforce the single-owner policy
+///   by throwing a bad_logic exception if more than one strong pointer claims to
+///   own the resource.  Use this policy when you want the code to specify that
+///   only one object owns a resource.
+///
+///  \note This class is not designed for use with a multi-threaded model.
+///   Tests using a multi-threaded model may not run properly.
+///
+///  \note If you use any single-owner class, you should also use the
+///   OnlyStrongMayReset class for the ResetPolicy in StrongPtr.
+///
+///  \note All single-owner policies do not allow programmers to return a
+///   a StrongPtr by value from a function, since that would temporarily create
+///   an additional strong co-pointer.  Nor can programmers store any strong
+///   co-pointers in a container that uses copy-in and copy-out semantics.  Once
+///   C++ allows for move constructors, these limitations go away.
+////////////////////////////////////////////////////////////////////////////////
+
+class LOKI_EXPORT SingleOwnerRefCount
+{
+protected:
+
+    explicit SingleOwnerRefCount( bool strong );
+
+    SingleOwnerRefCount( const void * p, bool strong );
+
+    SingleOwnerRefCount( const SingleOwnerRefCount & rhs,
+        bool strong );
+
+    SingleOwnerRefCount( const SingleOwnerRefCount & rhs,
+        bool isNull, bool strong );
+
+    /** The destructor should not anything since the call to ZapPointer inside
+     StrongPtr::~StrongPtr will do the cleanup which this dtor would have done.
+     By the time the dtor is called, the underlying pointer, m_info, is NULL.
+     */
+    inline ~SingleOwnerRefCount( void ) {}
+
+    bool Release( bool strong );
+
+    inline bool HasStrongPointer( void ) const
+    {
+        return ( NULL != m_info->GetStrongCoPointer() );
+    }
+
+    void Swap( SingleOwnerRefCount & rhs );
+
+    void SetPointer( void * p );
+
+    void ZapPointer( void );
+
+    inline void * GetPointer( void ) const
+    {
+        return m_info->GetPointer();
+    }
+
+    inline void * & GetPointerRef( void ) const
+    {
+        return m_info->GetPointerRef();
+    }
+
+private:
+    /// Default constructor is not implemented.
+    SingleOwnerRefCount( void );
+    /// Copy constructor is not implemented.
+    SingleOwnerRefCount( const SingleOwnerRefCount & );
+    /// Copy-assignment operator is not implemented.
+    SingleOwnerRefCount & operator = ( const SingleOwnerRefCount & );
+
+    inline bool IsStrong( void ) const
+    {
+        return ( this == m_info->GetStrongCoPointer() );
+    }
+
+    ::Loki::Private::OneOwnerRefCountInfo * m_info;
+
+};
+
+#if defined (LOKI_OBJECT_LEVEL_THREADING) || defined (LOKI_CLASS_LEVEL_THREADING)
 
 ////////////////////////////////////////////////////////////////////////////////
 ///  \class LockableTwoRefCounts
@@ -625,8 +1060,6 @@ private:
 ///   multi-threaded model with either class-level-locking or object-level-locking
 ///   do run properly.
 ////////////////////////////////////////////////////////////////////////////////
-
-#if defined (LOKI_OBJECT_LEVEL_THREADING) || defined (LOKI_CLASS_LEVEL_THREADING)
 
 class LOKI_EXPORT LockableTwoRefCounts
 {
@@ -662,6 +1095,24 @@ protected:
         m_counts( rhs.m_counts )
     {
         Increment( strong );
+    }
+
+    LockableTwoRefCounts( const LockableTwoRefCounts & rhs, bool isNull, bool strong ) :
+        m_counts( ( isNull ) ? NULL : rhs.m_counts )
+    {
+        if ( isNull )
+        {
+            void * temp = ThreadSafePointerAllocator::operator new(
+                sizeof(Loki::Private::LockableTwoRefCountInfo) );
+#ifdef DO_EXTRA_LOKI_TESTS
+            assert( temp != 0 );
+#endif
+            m_counts = new ( temp ) Loki::Private::LockableTwoRefCountInfo( strong );
+        }
+        else
+        {
+            Increment( strong );
+        }
     }
 
     /** The destructor does not need to do anything since the call to
@@ -719,7 +1170,7 @@ protected:
 
     void Swap( LockableTwoRefCounts & rhs )
     {
-        std::swap( m_counts, rhs.m_counts );
+        ::std::swap( m_counts, rhs.m_counts );
     }
 
     void SetPointer( void * p )
@@ -755,11 +1206,248 @@ protected:
     }
 
 private:
+    /// Default constructor is not implemented.
     LockableTwoRefCounts( void );
+    /// Copy constructor is not implemented.
+    LockableTwoRefCounts( const LockableTwoRefCounts & );
+    /// Copy-assignment operator is not implemented.
     LockableTwoRefCounts & operator = ( const LockableTwoRefCounts & );
 
     /// Pointer to all shared data.
     Loki::Private::LockableTwoRefCountInfo * m_counts;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+///  \class Lockable1OwnerRefCount
+///
+///  \ingroup  StrongPointerOwnershipGroup
+///   This implementation of StrongPtr's OwnershipPolicy extends the ownership
+///   policy class, LockableTwoRefCounts, to enforce that only one StrongPtr
+///   may "own" a resource.  The resource is destroyed only when its sole owner
+///   dies regardless of how many weak pointers access it.  The constructors
+///   enforce the single-owner policy by throwing a bad_logic exception if more
+///   than one strong pointer claims to own the resource.  Use this policy when
+///   you want the code to specify that only one object owns a resource.
+///
+///  \note This class is not designed for use with a single-threaded model.
+///   Tests using a single-threaded model will not run properly, but tests in a
+///   multi-threaded model with either class-level-locking or object-level-locking
+///   do run properly.
+///
+///  \note If you use any single-owner class, you should also use the
+///   OnlyStrongMayReset class for the ResetPolicy in StrongPtr.
+///
+///  \note All single-owner policies do not allow programmers to return a
+///   a StrongPtr by value from a function, since that would temporarily create
+///   an additional strong co-pointer.  Nor can programmers store any strong
+///   co-pointers in a container that uses copy-in and copy-out semantics.  Once
+///   C++ allows for move constructors, these limitations go away.
+////////////////////////////////////////////////////////////////////////////////
+
+class LOKI_EXPORT Lockable1OwnerRefCount
+{
+    typedef SmallValueObject< ::Loki::ClassLevelLockable > ThreadSafePointerAllocator;
+
+protected:
+
+    explicit Lockable1OwnerRefCount( bool strong )
+        : m_info( NULL )
+    {
+        assert( NULL != this );
+
+        void * temp = SmallObject<>::operator new(
+            sizeof(Loki::Private::Lockable1OwnerRefCountInfo) );
+#ifdef DO_EXTRA_LOKI_TESTS
+        assert( temp != 0 );
+#endif
+
+        Lockable1OwnerRefCount * ptr = ( strong ) ? this : NULL;
+        m_info = new ( temp )
+            ::Loki::Private::Lockable1OwnerRefCountInfo( ptr );
+    }
+
+    Lockable1OwnerRefCount( const void * p, bool strong )
+        : m_info( NULL )
+    {
+        assert( NULL != this );
+
+        void * temp = SmallObject<>::operator new(
+            sizeof(Loki::Private::Lockable1OwnerRefCountInfo) );
+#ifdef DO_EXTRA_LOKI_TESTS
+        assert( temp != 0 );
+#endif
+
+        Lockable1OwnerRefCount * ptr = ( strong ) ? this : NULL;
+        m_info = new ( temp )
+            ::Loki::Private::Lockable1OwnerRefCountInfo( p, ptr );
+    }
+
+    Lockable1OwnerRefCount( const Lockable1OwnerRefCount & rhs, bool strong ) :
+        m_info( rhs.m_info )
+    {
+        assert( NULL != this );
+
+        if ( strong && rhs.HasStrongPointer() )
+        {
+            throw ::std::logic_error( StrongPtr_Single_Owner_Exception_Message );
+        }
+
+        m_info = rhs.m_info;
+        if ( strong )
+        {
+            m_info->SetStrongCoPtr( this );
+        }
+        else
+        {
+            m_info->IncWeakCount();
+        }
+    }
+
+    Lockable1OwnerRefCount( const Lockable1OwnerRefCount & rhs,
+        bool isNull, bool strong ) :
+        m_info( ( isNull ) ? NULL : rhs.m_info )
+    {
+        assert( NULL != this );
+
+        if ( isNull )
+        {
+            void * temp = SmallObject<>::operator new(
+                sizeof(Loki::Private::Lockable1OwnerRefCountInfo) );
+#ifdef DO_EXTRA_LOKI_TESTS
+            assert( temp != 0 );
+#endif
+
+            Lockable1OwnerRefCount * ptr = ( strong ) ? this : NULL;
+            m_info = new ( temp )
+                ::Loki::Private::Lockable1OwnerRefCountInfo( ptr );
+            return;
+        }
+
+        if ( strong && rhs.HasStrongPointer() )
+        {
+            throw ::std::logic_error( StrongPtr_Single_Owner_Exception_Message );
+        }
+
+        m_info = rhs.m_info;
+        if ( strong )
+        {
+            m_info->SetStrongCoPtr( this );
+        }
+        else
+        {
+            m_info->IncWeakCount();
+        }
+    }
+
+    /** The destructor does not need to do anything since the call to
+     ZapPointer inside StrongPtr::~StrongPtr will do the cleanup which
+     this dtor would have done.
+     */
+    inline ~Lockable1OwnerRefCount( void ) {}
+
+    inline void Lock( void ) const
+    {
+        m_info->Lock();
+    }
+
+    inline void Unlock( void ) const
+    {
+        m_info->Unlock();
+    }
+
+    inline bool Release( bool strong )
+    {
+        assert( NULL != this );
+        assert( strong == IsStrong() );
+
+        if ( strong )
+        {
+            m_info->SetStrongCoPtr( NULL );
+            return true;
+        }
+
+        m_info->Lock();
+        assert( 0 < m_info->GetWeakCount() );
+        m_info->DecWeakCount();
+        const bool noOwner = ( !m_info->HasStrongPointer() );
+        const bool doRelease = ( ( 0 == m_info->GetWeakCount() ) && noOwner );
+        m_info->Unlock();
+        return doRelease;
+    }
+
+    bool HasStrongPointer( void ) const
+    {
+        return m_info->HasStrongPointer();
+    }
+
+    void Swap( Lockable1OwnerRefCount & rhs )
+    {
+        assert( NULL != this );
+        m_info->Lock();
+        rhs.m_info->Lock();
+
+        if ( IsStrong() && rhs.IsStrong() )
+        {
+            // These two strong pointers are trading resources.
+            rhs.m_info->SetStrongCoPtr( this );
+            m_info->SetStrongCoPtr( &rhs );
+        }
+        ::std::swap( m_info, rhs.m_info );
+        m_info->Unlock();
+        rhs.m_info->Unlock();
+    }
+
+    void SetPointer( void * p )
+    {
+        assert( NULL != this );
+        if ( IsStrong() || ( 1 == m_info->GetWeakCount() ) )
+        {
+            // Only a strong pointer or the last weak pointer may change a resource.
+            m_info->SetPointer( p );
+        }
+    }
+
+    void ZapPointer( void )
+    {
+        assert( !m_info->HasStrongPointer() );
+        if ( m_info->HasWeakPointer() )
+        {
+            m_info->ZapPointer();
+        }
+        else
+        {
+            SmallObject<>::operator delete ( m_info,
+                sizeof(Loki::Private::Lockable1OwnerRefCountInfo) );
+            m_info = NULL;
+        }
+    }
+
+    inline void * GetPointer( void ) const
+    {
+        return m_info->GetPointer();
+    }
+
+    inline void * & GetPointerRef( void ) const
+    {
+        return m_info->GetPointerRef();
+    }
+
+private:
+    /// Default constructor is not implemented.
+    Lockable1OwnerRefCount( void );
+    /// Copy constructor is not implemented.
+    Lockable1OwnerRefCount( const Lockable1OwnerRefCount & );
+    /// Copy-assignment operator is not implemented.
+    Lockable1OwnerRefCount & operator = ( const Lockable1OwnerRefCount & );
+
+    inline bool IsStrong( void ) const
+    {
+        return ( this == m_info->GetStrongCoPointer() );
+    }
+
+    /// Pointer to shared info about resource.
+    ::Loki::Private::Lockable1OwnerRefCountInfo * m_info;
+
 };
 
 #endif // if object-level-locking or class-level-locking
@@ -780,14 +1468,19 @@ protected:
 
     inline explicit TwoRefLinks( bool strong )
         : m_pointer( 0 )
+        , m_prev( this )
+        , m_next( this )
         , m_strong( strong )
     {
-        m_prev = m_next = this;
     }
 
     TwoRefLinks( const void * p, bool strong );
 
     TwoRefLinks( const TwoRefLinks & rhs, bool strong );
+
+    TwoRefLinks( const TwoRefLinks & rhs, bool isNull, bool strong );
+
+    ~TwoRefLinks( void );
 
     bool Release( bool strong );
 
@@ -795,7 +1488,12 @@ protected:
 
     bool Merge( TwoRefLinks & rhs );
 
+    /// Returns pointer to next link in cycle is a strong pointer.
+    const TwoRefLinks * GetNextStrongPointer( void ) const;
+
     bool HasStrongPointer( void ) const;
+
+    unsigned int GetStrongPointerCount( void ) const;
 
     inline void ZapPointer( void )
     {
@@ -814,13 +1512,20 @@ protected:
         return const_cast< void * & >( m_pointer );
     }
 
+    inline bool IsStrong( void ) const
+    {
+        return m_strong;
+    }
+
 private:
     static unsigned int CountPrevCycle( const TwoRefLinks * pThis );
     static unsigned int CountNextCycle( const TwoRefLinks * pThis );
 
-    /// Not implemented.
+    /// Default constructor is not implemented.
     TwoRefLinks( void );
-    /// Not implemented.
+    /// Copy constructor is not implemented.
+    TwoRefLinks( const TwoRefLinks & );
+    /// Copy-assignment operator is not implemented.
     TwoRefLinks & operator = ( const TwoRefLinks & );
 
     bool HasPrevNode( const TwoRefLinks * p ) const;
@@ -828,10 +1533,67 @@ private:
     bool AllNodesHaveSamePointer( void ) const;
     void ZapAllNodes( void );
 
+    bool IsValid( void ) const;
+
     void * m_pointer;
     mutable TwoRefLinks * m_prev;
     mutable TwoRefLinks * m_next;
     const bool m_strong;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+///  \class SingleOwnerRefLinks
+///
+///  \ingroup  StrongPointerOwnershipGroup
+///   This implementation of StrongPtr's OwnershipPolicy extends the ownership
+///   policy class, TwoRefLinks, to enforce that only one StrongPtr may "own" a
+///   resource.  The resource is destroyed only when its sole owner dies even if
+///   weak pointers access it.  The constructors enforce the single-owner policy
+///   by throwing a bad_logic exception if more than one strong pointer claims to
+///   own the resource.  Use this policy when you want the code to specify that
+///   only one object owns a resource.
+///
+///  \note This class is not designed for use with a multi-threaded model.
+///   Tests using a multi-threaded model may not run properly.
+///
+///  \note If you use any single-owner class, you should also use the
+///   OnlyStrongMayReset class for the ResetPolicy in StrongPtr.
+///
+///  \note All single-owner policies do not allow programmers to return a
+///   a StrongPtr by value from a function, since that would temporarily create
+///   an additional strong co-pointer.  Nor can programmers store any strong
+///   co-pointers in a container that uses copy-in and copy-out semantics.  Once
+///   C++ allows for move constructors, these limitations go away.
+////////////////////////////////////////////////////////////////////////////////
+
+class LOKI_EXPORT SingleOwnerRefLinks : public TwoRefLinks
+{
+protected:
+
+    explicit SingleOwnerRefLinks( bool strong );
+
+    SingleOwnerRefLinks( const void * p, bool strong );
+
+    SingleOwnerRefLinks( const SingleOwnerRefLinks & rhs, bool strong );
+
+    SingleOwnerRefLinks( const SingleOwnerRefLinks & rhs, bool isNull, bool strong );
+
+    ~SingleOwnerRefLinks( void );
+
+    void Swap( SingleOwnerRefLinks & rhs );
+
+    bool Merge( SingleOwnerRefLinks & rhs );
+
+    bool Release( bool strong );
+
+private:
+
+    /// Default constructor is not implemented.
+    SingleOwnerRefLinks( void );
+    /// Copy constructor is not implemented.
+    SingleOwnerRefLinks( const SingleOwnerRefLinks & );
+    /// Copy-assignment operator is not implemented.
+    SingleOwnerRefLinks & operator = ( const SingleOwnerRefLinks & );
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -852,11 +1614,11 @@ template
 <
     typename T,
     bool Strong = true,
-    class OwnershipPolicy = Loki::TwoRefCounts,
-    class ConversionPolicy = Loki::DisallowConversion,
-    template < class > class CheckingPolicy = Loki::AssertCheck,
-    template < class > class ResetPolicy = Loki::CantResetWithStrong,
-    template < class > class DeletePolicy = Loki::DeleteSingle,
+    class OwnershipPolicy = ::Loki::TwoRefCounts,
+    class ConversionPolicy = ::Loki::DisallowConversion,
+    template < class > class CheckingPolicy = ::Loki::AssertCheck,
+    template < class > class ResetPolicy = ::Loki::CantResetWithStrong,
+    template < class > class DeletePolicy = ::Loki::DeleteSingle,
     template < class > class ConstnessPolicy = LOKI_DEFAULT_CONSTNESS
 >
 class StrongPtr
@@ -893,21 +1655,75 @@ private:
     typedef typename Select<false, const StoredType&, NeverMatched>::Result ExplicitArg;
 #endif
 
+    /// StrongPtr uses this helper class to specify the dynamic-caster constructor.
+    class DynamicCastHelper {};
+
+    /// Private constructor is only used for dynamic-casting.
+    template
+    <
+        typename T1,
+        bool S1,
+        class OP1,
+        class CP1,
+        template < class > class KP1,
+        template < class > class RP1,
+        template < class > class DP1,
+        template < class > class CNP1
+    >
+    StrongPtr( const StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & rhs,
+        bool isNull, const DynamicCastHelper & helper )
+        // Dynamic casting from T1 to T and saving result in ownership policy.
+        : OP( rhs, isNull, Strong )
+    {
+        (void)helper; // do void cast to remove compiler warning.
+    }
+
+    /// Private constructor is only used for dynamic-casting.
+    template
+    <
+        typename T1,
+        bool S1,
+        class OP1,
+        class CP1,
+        template < class > class KP1,
+        template < class > class RP1,
+        template < class > class DP1,
+        template < class > class CNP1
+    >
+    StrongPtr( StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & rhs,
+        bool isNull, const DynamicCastHelper & helper )
+        // Dynamic casting from T1 to T and saving result in ownership policy.
+        : OP( rhs, isNull, Strong )
+    {
+        (void)helper; // do void cast to remove compiler warning.
+    }
+
 public:
 
-    StrongPtr( void ) : OP( Strong )
+    StrongPtr( void ) : OP( Strong ), DP()
     {
         KP::OnDefault( GetPointer() );
     }
 
-    explicit StrongPtr( ExplicitArg p ) : OP( p, Strong )
+    explicit StrongPtr( ExplicitArg p ) : OP( p, Strong ), DP()
     {
         KP::OnInit( GetPointer() );
     }
 
-    StrongPtr( ImplicitArg p ) : OP( p, Strong )
+    StrongPtr( ImplicitArg p ) : OP( p, Strong ), DP()
     {
         KP::OnInit( GetPointer() );
+    }
+
+    /** This constructor was designed to only work with the DeleteArray policy. Using it with any
+     other Delete policies will cause compiler errors. Call it with this syntax:
+     "ThingyPtr sp2( new Thingy[ 4 ], 4 );" so the StrongPtr knows how many elements are in the
+     array for range checking.
+     */
+    StrongPtr( ImplicitArg p, size_t itemCount ) : OP( p, Strong ), DP( itemCount )
+    {
+        KP::OnInit( GetPointer() );
+        DP::OnInit( GetPointer() );
     }
 
     StrongPtr( const StrongPtr & rhs )
@@ -928,7 +1744,7 @@ public:
     >
     StrongPtr(
         const StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & rhs )
-        : OP( rhs, Strong )
+        : OP( rhs, Strong ), CP( rhs ), DP( rhs )
     {
     }
 
@@ -945,7 +1761,7 @@ public:
     >
     StrongPtr(
         StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & rhs )
-        : OP( rhs, Strong )
+        : OP( rhs, Strong ), CP( rhs ), DP( rhs )
     {
     }
 
@@ -979,6 +1795,21 @@ public:
         return *this;
     }
 
+    /** This function is equivalent to an assignment operator for StrongPtr's that use the
+     DeleteArray policy where the programmer needs to write the equivalent of "sp = new P;".
+     With DeleteArray, the programmer should write "sp.Assign( new [5] Thingy, 5 );" so the
+     StrongPtr knows how many elements are in the array.
+     */
+    StrongPtr & Assign( T * p, size_t itemCount )
+    {
+        if ( GetPointer() != p )
+        {
+            StrongPtr temp( p, itemCount );
+            Swap( temp );
+        }
+        return *this;
+    }
+
     template
     <
         typename T1,
@@ -1001,7 +1832,7 @@ public:
         return *this;
     }
 
-    bool IsStrong( void ) const
+    inline bool IsStrong( void ) const
     {
         return Strong;
     }
@@ -1032,13 +1863,63 @@ public:
         }
     }
 
+    /// Dynamically-casts parameter pointer to the type specified by this SmartPtr type.
+    template
+    <
+        typename T1,
+        bool S1,
+        class OP1,
+        class CP1,
+        template < class > class KP1,
+        template < class > class RP1,
+        template < class > class DP1,
+        template < class > class CNP1
+    >
+    StrongPtr & DynamicCastFrom( const StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & rhs )
+    {
+        typedef typename StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 >::PointerType RightPointerType;
+        const StrongPtr & sp = reinterpret_cast< const StrongPtr & >( rhs );
+        PointerType p = sp.GetPointer();
+        const RightPointerType rp = reinterpret_cast< const RightPointerType >( p );
+        p = dynamic_cast< const PointerType >( rp );
+        const bool isNull = ( NULL == p );
+        StrongPtr temp( rhs, isNull, DynamicCastHelper() );
+        Swap( temp );
+        return *this;
+    }
+
+    /// Dynamically-casts parameter pointer to the type specified by this SmartPtr type.
+    template
+    <
+        typename T1,
+        bool S1,
+        class OP1,
+        class CP1,
+        template < class > class KP1,
+        template < class > class RP1,
+        template < class > class DP1,
+        template < class > class CNP1
+    >
+    StrongPtr & DynamicCastFrom( StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 > & rhs )
+    {
+        typedef typename StrongPtr< T1, S1, OP1, CP1, KP1, RP1, DP1, CNP1 >::PointerType RightPointerType;
+        StrongPtr & sp = reinterpret_cast< StrongPtr & >( rhs );
+        PointerType p = sp.GetPointer();
+        RightPointerType rp = reinterpret_cast< RightPointerType >( p );
+        p = dynamic_cast< PointerType >( rp );
+        const bool isNull = ( NULL == p );
+        StrongPtr temp( rhs, isNull, DynamicCastHelper() );
+        Swap( temp );
+        return *this;
+    }
+
 #ifdef LOKI_ENABLE_FRIEND_TEMPLATE_TEMPLATE_PARAMETER_WORKAROUND
 
     // old non standard in class definition of friends
     friend bool ReleaseAll( StrongPtr & sp,
         typename StrongPtr::StoredType & p )
     {
-        if ( !sp.RP::OnReleaseAll( sp.IsStrong() || sp.OP::HasStrongPointer() ) )
+        if ( !sp.RP::OnReleaseAll( sp.IsStrong(), sp.OP::HasStrongPointer() ) )
         {
             return false;
         }
@@ -1054,7 +1935,7 @@ public:
         {
             return true;
         }
-        if ( !sp.RP::OnResetAll( sp.IsStrong() || sp.OP::HasStrongPointer() ) )
+        if ( !sp.RP::OnResetAll( sp.IsStrong(), sp.OP::HasStrongPointer() ) )
         {
             return false;
         }
@@ -1159,6 +2040,30 @@ public:
     {
         KP::OnDereference( GetPointer() );
         return * GetPointer();
+    }
+
+    /** operator[] returns a reference to an modifiable object. If the index is greater than or
+     equal to the number of elements, the function will throw a std::out_of_range exception.
+     This only works with DeleteArray policy. Any other policy will cause a compiler error.
+     */
+    ReferenceType operator [] ( size_t index )
+    {
+        PointerType p = GetPointer();
+        KP::OnDereference( p );
+        DP::OnCheckRange( index );
+        return p[ index ];
+    }
+
+    /** operator[] returns a reference to a const object. If the index is greater than or
+     equal to the number of elements, the function will throw a std::out_of_range exception.
+     This only works with DeleteArray policy. Any other policy will cause a compiler error.
+     */
+    ConstReferenceType operator [] ( size_t index ) const
+    {
+        ConstPointerType p = GetPointer();
+        KP::OnDereference( p );
+        DP::OnCheckRange( index );
+        return p[ index ];
     }
 
     /// Helper function which can be called to avoid exposing GetPointer function.
@@ -1377,7 +2282,7 @@ template
 bool ReleaseAll( StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & sp,
                  typename StrongPtr< T, S, OP, CP, KP, RP, DP, CNP >::StoredType & p )
 {
-  if ( !sp.RP<T>::OnReleaseAll( sp.IsStrong() || sp.OP::HasStrongPointer() ) )
+  if ( !sp.RP<T>::OnReleaseAll( sp.IsStrong(), sp.OP::HasStrongPointer() ) )
   {
     return false;
   }
@@ -1405,7 +2310,7 @@ bool ResetAll( StrongPtr< T, S, OP, CP, KP, RP, DP, CNP > & sp,
   {
     return true;
   }
-  if ( !sp.RP<T>::OnResetAll( sp.IsStrong() || sp.OP::HasStrongPointer() ) )
+  if ( !sp.RP<T>::OnResetAll( sp.IsStrong(), sp.OP::HasStrongPointer() ) )
   {
     return false;
   }
@@ -1693,5 +2598,8 @@ namespace std
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#endif // end file guardian
+#if defined( _MSC_VER )
+    #pragma warning( pop )
+#endif
 
+#endif // end file guardian

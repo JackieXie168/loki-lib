@@ -20,7 +20,9 @@
 
 #include <assert.h>
 
-#include <process.h>
+#if !defined( _MSC_VER )
+    #include <unistd.h> // needed for the usleep function.
+#endif
 
 
 using namespace ::std;
@@ -36,7 +38,7 @@ using namespace ::std;
 #endif
 
 
-volatile Thread * Thread::s_thread = nullptr;
+volatile LOKI_THREAD_LOCAL Thread * Thread::s_thread = nullptr;
 
 
 // ----------------------------------------------------------------------------
@@ -72,7 +74,6 @@ Thread::Thread( volatile ThreadPool * owner, CallFunction function,
 Thread::~Thread( void )
 {
     assert( IsValid( m_owner ) );
-    assert( Thread::Dead == m_status );
     assert( nullptr == m_func );
     assert( nullptr == m_parm );
     assert( m_stop );
@@ -94,7 +95,7 @@ bool Thread::WaitForThread( void ) volatile
 #if defined( _MSC_VER )
         ::SleepEx( 1, true );
 #else
-        ::sleep( 1 );
+        ::usleep( 1000 );
 #endif
     }
     return true;
@@ -176,7 +177,7 @@ unsigned int ThreadPool::Create( unsigned int threadCount ) volatile
     if ( threadCount <= countNow )
         return threadCount;
 
-    const unsigned int totalCount = pThis->m_threads.size();
+    const size_t totalCount = pThis->m_threads.size();
     const unsigned int howManyToAdd = threadCount - countNow;
     if ( pThis->m_threads.capacity() <= howManyToAdd )
         pThis->m_threads.reserve( totalCount + howManyToAdd );
@@ -199,12 +200,12 @@ unsigned int ThreadPool::Create( unsigned int threadCount ) volatile
 
 // ----------------------------------------------------------------------------
 
-unsigned int ThreadPool::GetCount( void ) const volatile
+size_t ThreadPool::GetCount( void ) const volatile
 {
     assert( IsValid() );
     LOKI_DEBUG_CODE( Checker checker( this ); (void)checker; )
     ThreadPool * pThis = const_cast< ThreadPool * >( this );
-    const unsigned int count = pThis->m_threads.size();
+    const size_t count = pThis->m_threads.size();
     return count;
 }
 
@@ -343,7 +344,7 @@ volatile Thread * ThreadPool::Start( CallFunction function, void * parm ) volati
 #if defined( _MSC_VER )
         ::SleepEx( 1, true );
 #else
-        ::sleep( 1 );
+        ::usleep( 1000 );
 #endif
         if ( thread->m_status == Thread::Starting )
         {

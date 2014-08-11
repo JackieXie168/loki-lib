@@ -4,9 +4,9 @@
 // Copyright (c) 2008 Richard Sposato
 // The copyright on this file is protected under the terms of the MIT license.
 //
-// Permission to use, copy, modify, distribute and sell this software for any 
-// purpose is hereby granted without fee, provided that the above copyright 
-// notice appear in all copies and that both that copyright notice and this 
+// Permission to use, copy, modify, distribute and sell this software for any
+// purpose is hereby granted without fee, provided that the above copyright
+// notice appear in all copies and that both that copyright notice and this
 // permission notice appear in supporting documentation.
 //
 // The author makes no representations about the suitability of this software
@@ -14,13 +14,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id$
 
-
-// ----------------------------------------------------------------------------
-
-
-#include "LevelMutex.h"
+#include "loki/LevelMutex.h"
 
 #include "MultiThreadTests.hpp"
 #include "Thing.hpp"
@@ -47,6 +42,7 @@ typedef ::Loki::LevelMutex< ::Loki::SpinLevelMutex, 1,
 
 void SingleThreadSimpleTest( void )
 {
+    cout << "Starting SingleThreadSimpleTest." << endl;
 
     const unsigned int priorLevel = GetCurrentThreadsLevel();
     const unsigned int priorLockCount  = CountLocksInCurrentThread();
@@ -171,12 +167,15 @@ void SingleThreadSimpleTest( void )
     assert( okay );
     okay = ( CountMutexesAtCurrentLevel()  == priorLevelMutexCount );
     assert( okay );
+
+    cout << "Finished SingleThreadSimpleTest." << endl;
 }
 
 // ----------------------------------------------------------------------------
 
 void SingleThreadReentrantTest( void )
 {
+    cout << "Starting SingleThreadReentrantTest." << endl;
 
     const unsigned int priorLevel = GetCurrentThreadsLevel();
     const unsigned int priorLockCount  = CountLocksInCurrentThread();
@@ -283,12 +282,15 @@ void SingleThreadReentrantTest( void )
     assert( okay );
     okay = ( CountMutexesAtCurrentLevel()  == priorLevelMutexCount );
     assert( okay );
+
+    cout << "Finished SingleThreadReentrantTest." << endl;
 }
 
 // ----------------------------------------------------------------------------
 
 void SingleThreadSimpleMultiLockTest( void )
 {
+    cout << "Finished SingleThreadSimpleMultiLockTest." << endl;
 
     const unsigned int priorLevel = GetCurrentThreadsLevel();
     const unsigned int priorLockCount  = CountLocksInCurrentThread();
@@ -481,12 +483,15 @@ void SingleThreadSimpleMultiLockTest( void )
     assert( okay );
     okay = ( CountMutexesAtCurrentLevel()  == priorLevelMutexCount );
     assert( okay );
+
+    cout << "Finished SingleThreadSimpleMultiLockTest." << endl;
 }
 
 // ----------------------------------------------------------------------------
 
 void SingleThreadExceptionTest( void )
 {
+    cout << "Starting SingleThreadExceptionTest." << endl;
 
     const unsigned int priorLevel = GetCurrentThreadsLevel();
     const unsigned int priorLockCount  = CountLocksInCurrentThread();
@@ -512,7 +517,6 @@ void SingleThreadExceptionTest( void )
     ExceptionMutex mutex2a( 2 );
     mutex2a.GetMutexPolicy().SetTossPolicy( ExceptionTossingMutex::Never );
     MutexErrors::Type result = MutexErrors::Success;
-
     try
     {
         mutex1a.Lock();
@@ -547,6 +551,7 @@ void SingleThreadExceptionTest( void )
     ExceptionMutex mutex2d( 2 );
     mutex2d.GetMutexPolicy().SetTossPolicy( ExceptionTossingMutex::Never );
     LevelMutexInfo::MutexContainer mutexes;
+
     try
     {
         mutexes.push_back( &mutex2a );
@@ -577,6 +582,7 @@ void SingleThreadExceptionTest( void )
     ExceptionMutex mutex3b( 3 );
     mutex3b.GetMutexPolicy().SetTossPolicy( ExceptionTossingMutex::Never );
     mutexes.clear();
+
     try
     {
         mutexes.push_back( &mutex3a );
@@ -636,12 +642,15 @@ void SingleThreadExceptionTest( void )
     assert( okay );
     okay = ( CountMutexesAtCurrentLevel()  == priorLevelMutexCount );
     assert( okay );
+
+    cout << "Finished SingleThreadExceptionTest." << endl;
 }
 
 // ----------------------------------------------------------------------------
 
-int main( unsigned int argc, const char * const argv[] )
+int main( int argc, const char * const argv[] )
 {
+    char ender;
 
     cout << "Starting LevelMutex tests." << endl;
     if ( 1 < argc )
@@ -674,7 +683,9 @@ int main( unsigned int argc, const char * const argv[] )
         cout << "Caught unknown exception!" << endl;
     }
 
-    ::system( "pause" );
+    cout << endl << "Done running LevelMutex tests. Press <Enter> key to continue. " << endl;
+    cin.get( ender );
+
     return 0;
 }
 

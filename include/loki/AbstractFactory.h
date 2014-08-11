@@ -2,26 +2,39 @@
 // The Loki Library
 // Copyright (c) 2001 by Andrei Alexandrescu
 // This code accompanies the book:
-// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design 
+// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design
 //     Patterns Applied". Copyright (c) 2001. Addison-Wesley.
-// Permission to use, copy, modify, distribute and sell this software for any 
-//     purpose is hereby granted without fee, provided that the above copyright 
-//     notice appear in all copies and that both that copyright notice and this 
-//     permission notice appear in supporting documentation.
-// The author or Addison-Wesley Longman make no representations about the 
-//     suitability of this software for any purpose. It is provided "as is" 
-//     without express or implied warranty.
+//
+// Code covered by the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 #ifndef LOKI_ABSTRACTFACTORY_INC_
 #define LOKI_ABSTRACTFACTORY_INC_
 
-// $Id: AbstractFactory.h 771 2006-10-27 18:05:03Z clitte_bbt $
+// $Id: AbstractFactory.h 1115 2011-09-23 00:46:21Z rich_sposato $
 
 
-#include "Typelist.h"
-#include "Sequence.h"
-#include "TypeManip.h"
-#include "HierarchyGenerators.h"
+#include <loki/Typelist.h>
+#include <loki/Sequence.h>
+#include <loki/TypeManip.h>
+#include <loki/HierarchyGenerators.h>
 
 #include <cassert>
 
@@ -31,7 +44,7 @@
  * \ingroup		FactoriesGroup
  * \brief		Implements an abstract object factory.
  */
- 
+
 /**
  * \class		AbstractFactory
  * \ingroup		AbstractFactoryGroup
@@ -68,14 +81,14 @@ namespace Loki
     {
     public:
         typedef TList ProductList;
-        
+
         template <class T> T* Create()
         {
             Unit<T>& unit = *this;
             return unit.DoCreate(Type2Type<T>());
         }
     };
-    
+
 ////////////////////////////////////////////////////////////////////////////////
 // class template OpNewFactoryUnit
 // Creates an object by invoking the new operator
@@ -85,10 +98,10 @@ namespace Loki
     class OpNewFactoryUnit : public Base
     {
         typedef typename Base::ProductList BaseProductList;
-    
+
     protected:
         typedef typename BaseProductList::Tail ProductList;
-    
+
     public:
         typedef typename BaseProductList::Head AbstractProduct;
         ConcreteProduct* DoCreate(Type2Type<AbstractProduct>)
@@ -101,7 +114,7 @@ namespace Loki
 // class template PrototypeFactoryUnit
 // Creates an object by cloning a prototype
 // There is a difference between the implementation herein and the one described
-//     in the book: GetPrototype and SetPrototype use the helper friend 
+//     in the book: GetPrototype and SetPrototype use the helper friend
 //     functions DoGetPrototype and DoSetPrototype. The friend functions avoid
 //     name hiding issues. Plus, GetPrototype takes a reference to pointer
 //     instead of returning the pointer by value.
@@ -111,7 +124,7 @@ namespace Loki
     class PrototypeFactoryUnit : public Base
     {
         typedef typename Base::ProductList BaseProductList;
-    
+
     protected:
         typedef typename BaseProductList::Tail ProductList;
 
@@ -133,17 +146,17 @@ namespace Loki
         template <class U>
         void GetPrototype(U*& p)
         { return DoGetPrototype(*this, p); }
-        
+
         template <class U>
         void SetPrototype(U* pObj)
         { DoSetPrototype(*this, pObj); }
-        
+
         AbstractProduct* DoCreate(Type2Type<AbstractProduct>)
         {
             assert(pPrototype_);
             return pPrototype_->Clone();
         }
-        
+
     private:
         AbstractProduct* pPrototype_;
     };

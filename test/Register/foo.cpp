@@ -10,11 +10,13 @@
 //     without express or implied warranty.
 ////////////////////////////////////////////////////////////////////////////////
 
-// $Id: foo.cpp 760 2006-10-17 20:36:13Z syntheticpp $
+// $Id: foo.cpp 1060 2009-11-21 10:44:08Z syntheticpp $
 
 
 #include "foo.h"
 #include <iostream>
+
+#include <loki/Register.h>
 
 Base::~Base(){}
 

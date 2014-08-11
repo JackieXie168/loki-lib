@@ -2,33 +2,45 @@
 // The Loki Library
 // Copyright (c) 2001 by Andrei Alexandrescu
 // This code accompanies the book:
-// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design 
+// Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design
 //     Patterns Applied". Copyright (c) 2001. Addison-Wesley.
-// Permission to use, copy, modify, distribute and sell this software for any 
-//     purpose is hereby granted without fee, provided that the above copyright 
-//     notice appear in all copies and that both that copyright notice and this 
-//     permission notice appear in supporting documentation.
-// The author or Addison-Wesley Longman make no representations about the 
-//     suitability of this software for any purpose. It is provided "as is" 
-//     without express or implied warranty.
+// Code covered by the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 #ifndef LOKI_VISITOR_INC_
 #define LOKI_VISITOR_INC_
 
-// $Id: Visitor.h 751 2006-10-17 19:50:37Z syntheticpp $
+// $Id: Visitor.h 1115 2011-09-23 00:46:21Z rich_sposato $
 
 
 ///  \defgroup VisitorGroup Visitor
 
-#include "Typelist.h"
-#include "HierarchyGenerators.h"
+#include <loki/Typelist.h>
+#include <loki/HierarchyGenerators.h>
 
 namespace Loki
 {
 
 ////////////////////////////////////////////////////////////////////////////////
 /// \class BaseVisitor
-///  
+///
 /// \ingroup VisitorGroup
 /// The base class of any Acyclic Visitor
 ////////////////////////////////////////////////////////////////////////////////
@@ -38,7 +50,7 @@ namespace Loki
     public:
         virtual ~BaseVisitor() {}
     };
-    
+
 ////////////////////////////////////////////////////////////////////////////////
 /// \class Visitor
 ///
@@ -48,7 +60,7 @@ namespace Loki
 /// \par Usage
 ///
 /// Defining the visitable class:
-/// 
+///
 /// \code
 /// class RasterBitmap : public BaseVisitable<>
 /// {
@@ -59,7 +71,7 @@ namespace Loki
 ///
 /// Way 1 to define a visitor:
 /// \code
-/// class SomeVisitor : 
+/// class SomeVisitor :
 ///     public BaseVisitor // required
 ///     public Visitor<RasterBitmap>,
 ///     public Visitor<Paragraph>
@@ -72,7 +84,7 @@ namespace Loki
 ///
 /// Way 2 to define the visitor:
 /// \code
-/// class SomeVisitor : 
+/// class SomeVisitor :
 ///     public BaseVisitor // required
 ///     public Visitor<LOKI_TYPELIST_2(RasterBitmap, Paragraph)>
 /// {
@@ -84,7 +96,7 @@ namespace Loki
 ///
 /// Way 3 to define the visitor:
 /// \code
-/// class SomeVisitor : 
+/// class SomeVisitor :
 ///     public BaseVisitor // required
 ///     public Visitor<Seq<RasterBitmap, Paragraph>::Type>
 /// {
@@ -97,7 +109,7 @@ namespace Loki
 /// \par Using const visit functions:
 ///
 /// Defining the visitable class (true for const):
-/// 
+///
 /// \code
 /// class RasterBitmap : public BaseVisitable<void, DefaultCatchAll, true>
 /// {
@@ -108,7 +120,7 @@ namespace Loki
 ///
 /// Defining the visitor which only calls const member functions:
 /// \code
-/// class SomeVisitor : 
+/// class SomeVisitor :
 ///     public BaseVisitor // required
 ///     public Visitor<RasterBitmap, void, true>,
 /// {
@@ -119,7 +131,7 @@ namespace Loki
 ///
 /// \par Example:
 ///
-/// test/Visitor/main.cpp 
+/// test/Visitor/main.cpp
 ////////////////////////////////////////////////////////////////////////////////
 
     template <class T, typename R = void, bool ConstVisit = false>
@@ -150,7 +162,7 @@ namespace Loki
 // This specialization is not present in the book. It makes it easier to define
 // Visitors for multiple types in a shot by using a typelist. Example:
 //
-// class SomeVisitor : 
+// class SomeVisitor :
 //     public BaseVisitor // required
 //     public Visitor<LOKI_TYPELIST_2(RasterBitmap, Paragraph)>
 // {
@@ -169,7 +181,7 @@ namespace Loki
        // using Visitor<Head, R>::Visit;
        // using Visitor<Tail, R>::Visit;
     };
-    
+
     template <class Head, typename R>
     class Visitor<Typelist<Head, NullType>, R, false> : public Visitor<Head, R, false>
     {
@@ -187,7 +199,7 @@ namespace Loki
        // using Visitor<Head, R>::Visit;
        // using Visitor<Tail, R>::Visit;
     };
-    
+
     template <class Head, typename R>
     class Visitor<Typelist<Head, NullType>, R, true> : public Visitor<Head, R, true>
     {
@@ -216,7 +228,7 @@ namespace Loki
         virtual R Visit(Head&)
         { return R(); }
     };
-    
+
     template <class Head, typename R>
     class BaseVisitorImpl<Typelist<Head, NullType>, R>
         : public Visitor<Head, R>
@@ -225,7 +237,7 @@ namespace Loki
         virtual R Visit(Head&)
         { return R(); }
     };
-    
+
 ////////////////////////////////////////////////////////////////////////////////
 // class template BaseVisitable
 ////////////////////////////////////////////////////////////////////////////////
@@ -241,9 +253,9 @@ struct DefaultCatchAll
 // class template BaseVisitable
 ////////////////////////////////////////////////////////////////////////////////
 
-    template 
+    template
     <
-        typename R = void, 
+        typename R = void,
         template <typename, class> class CatchAll = DefaultCatchAll,
         bool ConstVisitable = false
     >
@@ -256,7 +268,7 @@ struct DefaultCatchAll
         typedef R ReturnType;
         virtual ~BaseVisitable() {}
         virtual ReturnType Accept(BaseVisitor&) = 0;
-        
+
     protected: // give access only to the hierarchy
         template <class T>
         static ReturnType AcceptImpl(T& visited, BaseVisitor& guest)
@@ -277,7 +289,7 @@ struct DefaultCatchAll
         typedef R ReturnType;
         virtual ~BaseVisitable() {}
         virtual ReturnType Accept(BaseVisitor&) const = 0;
-        
+
     protected: // give access only to the hierarchy
         template <class T>
         static ReturnType AcceptImpl(const T& visited, BaseVisitor& guest)
@@ -295,7 +307,7 @@ struct DefaultCatchAll
 ////////////////////////////////////////////////////////////////////////////////
 /// \def LOKI_DEFINE_VISITABLE()
 /// \ingroup VisitorGroup
-/// Put it in every class that you want to make visitable 
+/// Put it in every class that you want to make visitable
 /// (in addition to deriving it from BaseVisitable<R>)
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -306,7 +318,7 @@ struct DefaultCatchAll
 ////////////////////////////////////////////////////////////////////////////////
 /// \def LOKI_DEFINE_CONST_VISITABLE()
 /// \ingroup VisitorGroup
-/// Put it in every class that you want to make visitable by const member 
+/// Put it in every class that you want to make visitable by const member
 /// functions (in addition to deriving it from BaseVisitable<R>)
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -318,7 +330,7 @@ struct DefaultCatchAll
 /// \class CyclicVisitor
 ///
 /// \ingroup VisitorGroup
-/// Put it in every class that you want to make visitable (in addition to 
+/// Put it in every class that you want to make visitable (in addition to
 /// deriving it from BaseVisitable<R>
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -328,7 +340,7 @@ struct DefaultCatchAll
     public:
         typedef R ReturnType;
         // using Visitor<TList, R>::Visit;
-        
+
         template <class Visited>
         ReturnType GenericVisit(Visited& host)
         {
@@ -336,7 +348,7 @@ struct DefaultCatchAll
             return subObj.Visit(host);
         }
     };
-    
+
 ////////////////////////////////////////////////////////////////////////////////
 /// \def LOKI_DEFINE_CYCLIC_VISITABLE(SomeVisitor)
 /// \ingroup VisitorGroup
