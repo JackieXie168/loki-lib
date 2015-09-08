@@ -1,0 +1,7 @@
+*.dll
+*/*/[Dd]ebug/*
+*/[Dd]ebug/*
+*/*.user
+*/*/*.user
+*/*.lib
+*/*/*.lib

@@ -1059,6 +1059,15 @@ int main()
 */
 int main()
 {
+	/*typedef flex_string<
+	char,
+	 std::char_traits<char>,
+	 std::allocator<char>,
+	 VectorStringStorage<char, std::allocator<char>  >
+	> String;*/
+	
+	String str("1100");
+	std::cout<<str<<std::endl;
     TestBug2536490();
     srand(unsigned(time(0)));
     Compare();

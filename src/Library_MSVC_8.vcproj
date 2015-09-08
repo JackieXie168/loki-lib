@@ -282,35 +282,35 @@
 				Name="flexstring"
 				>
 				<File
-					RelativePath="..\loki\include\loki\flex\allocatorstringstorage.h"
+					RelativePath="..\include\loki\flex\allocatorstringstorage.h"
 					>
 				</File>
 				<File
-					RelativePath="..\loki\include\loki\flex\cowstringopt.h"
+					RelativePath="..\include\loki\flex\cowstringopt.h"
 					>
 				</File>
 				<File
-					RelativePath="..\loki\include\loki\flex\flex_string.h"
+					RelativePath="..\include\loki\flex\flex_string.h"
 					>
 				</File>
 				<File
-					RelativePath="..\loki\include\loki\flex\flex_string_details.h"
+					RelativePath="..\include\loki\flex\flex_string_details.h"
 					>
 				</File>
 				<File
-					RelativePath="..\loki\include\loki\flex\flex_string_shell.h"
+					RelativePath="..\include\loki\flex\flex_string_shell.h"
 					>
 				</File>
 				<File
-					RelativePath="..\loki\include\loki\flex\simplestringstorage.h"
+					RelativePath="..\include\loki\flex\simplestringstorage.h"
 					>
 				</File>
 				<File
-					RelativePath="..\loki\include\loki\flex\smallstringopt.h"
+					RelativePath="..\include\loki\flex\smallstringopt.h"
 					>
 				</File>
 				<File
-					RelativePath="..\loki\include\loki\flex\vectorstringstorage.h"
+					RelativePath="..\include\loki\flex\vectorstringstorage.h"
 					>
 				</File>
 			</Filter>

@@ -1,7 +1,6 @@
-
 Microsoft Visual Studio Solution File, Format Version 9.00
 # Visual Studio 2005
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Library", "src\library_MSVC_8.vcproj", "{CBDB8E7A-4286-4AE3-A190-BA33D7C53FF0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Library", "src\Library_MSVC_8.vcproj", "{CBDB8E7A-4286-4AE3-A190-BA33D7C53FF0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Factory", "test\Factory\Factory_MSVC_8.vcproj", "{925D5863-2F77-41B7-96F1-CC814762C40F}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -59,6 +58,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CachedFactory", "test\Cache
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CheckReturn", "test\CheckReturn\CheckReturn_MSVC_8.vcproj", "{C0826A05-9143-4545-B5DE-811C188CB54E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "teststrongptr", "teststrongptr\teststrongptr.vcproj", "{DEBCAF17-3568-4EB1-8226-0613741B1B45}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CBDB8E7A-4286-4AE3-A190-BA33D7C53FF0} = {CBDB8E7A-4286-4AE3-A190-BA33D7C53FF0}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "loki_ext", "loki_ext\loki_ext.vcproj", "{C33CA617-B9C5-4B1C-9523-8CE91C3D2B34}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -114,7 +120,6 @@ Global
 		{B87B3522-7DAA-400D-A47D-A74B9B8B3552}.Release|Win32.ActiveCfg = Release|Win32
 		{B87B3522-7DAA-400D-A47D-A74B9B8B3552}.Release|Win32.Build.0 = Release|Win32
 		{D490B134-B794-42CF-8AF8-9FDA524B9D3B}.Debug|Win32.ActiveCfg = Debug|Win32
-		{D490B134-B794-42CF-8AF8-9FDA524B9D3B}.Debug|Win32.Bild.0 = Debug|Win32
 		{D490B134-B794-42CF-8AF8-9FDA524B9D3B}.Release|Win32.ActiveCfg = Release|Win32
 		{D490B134-B794-42CF-8AF8-9FDA524B9D3B}.Release|Win32.Build.0 = Release|Win32
 		{D7AB4FEF-E7AF-443D-93A5-37F323F2042D}.Debug|Win32.ActiveCfg = Debug|Win32
@@ -145,6 +150,14 @@ Global
 		{C0826A05-9143-4545-B5DE-811C188CB54E}.Debug|Win32.Build.0 = Debug|Win32
 		{C0826A05-9143-4545-B5DE-811C188CB54E}.Release|Win32.ActiveCfg = Release|Win32
 		{C0826A05-9143-4545-B5DE-811C188CB54E}.Release|Win32.Build.0 = Release|Win32
+		{DEBCAF17-3568-4EB1-8226-0613741B1B45}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DEBCAF17-3568-4EB1-8226-0613741B1B45}.Debug|Win32.Build.0 = Debug|Win32
+		{DEBCAF17-3568-4EB1-8226-0613741B1B45}.Release|Win32.ActiveCfg = Release|Win32
+		{DEBCAF17-3568-4EB1-8226-0613741B1B45}.Release|Win32.Build.0 = Release|Win32
+		{C33CA617-B9C5-4B1C-9523-8CE91C3D2B34}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C33CA617-B9C5-4B1C-9523-8CE91C3D2B34}.Debug|Win32.Build.0 = Debug|Win32
+		{C33CA617-B9C5-4B1C-9523-8CE91C3D2B34}.Release|Win32.ActiveCfg = Release|Win32
+		{C33CA617-B9C5-4B1C-9523-8CE91C3D2B34}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

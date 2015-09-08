@@ -1296,5 +1296,10 @@ getline(
 template <typename E1, class T, class A, class S>
 const typename flex_string<E1, T, A, S>::size_type
 flex_string<E1, T, A, S>::npos = static_cast<typename flex_string<E1, T, A, S>::size_type>(-1);
-
+typedef flex_string<
+	char,
+	 std::char_traits<char>,
+	 std::allocator<char>,
+	 SmallStringOpt<  VectorStringStorage<char, std::allocator<char> >, 16 > 
+	> String;
 #endif // FLEX_STRING_SHELL_INC_
