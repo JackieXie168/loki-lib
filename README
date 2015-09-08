@@ -1,3 +1,27 @@
+Branched main loki tree into new libferrisloki library and added some extensions
+in FerrisLoki/Extensions.hh. This tree will be synced with the main loki tree
+and is aimed at Linux development.
+
+Loki library adapted for Linux and containing extensions
+in Extensions.hh that have not been feed back into the
+main Loki tree yet. Note that the main library has been
+renamed to libferrisloki and headers installed into
+FerrisLoki/ in include so as to highlight that this is
+not the standard version.
+
+Changes and extensions done by Ben Martin.
+
+This version of loki also requires libsigc++-2.x to build. 
+This could become a build dependent requirement, but
+since I have sigc++ on all systems I don't want to spend
+the time #ifdefing it at current.
+
+-------------------------------------------------------------------
+Based on the mainstream Loki library which has the following README
+This should be the loki that was released on sf.net loki-0.1.6
+previous sync (prior to ferrisloki 2.4.x) was done on loki-13april2003 (0.0.3)
+-------------------------------------------------------------------
+
 Last update: Novmber 16, 2005
 
 Directions:

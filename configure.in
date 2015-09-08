@@ -1,0 +1,90 @@
+AC_INIT(ferrisloki, 3.0.13)
+
+PACKAGE=$PACKAGE_NAME
+VERSION=$PACKAGE_VERSION
+LOKI_VERSION=$VERSION
+LOKI_FULLV=$VERSION
+LOKI_MAJOR=`echo $VERSION | sed 's/^\([[0-9]]\)*\..*/\1/g'`
+LOKI_MINOR=$(echo $VERSION | sed 's/^[[0-9]]*\.\([[0-9]]\)*\..*/\1/g')
+LOKI_BETA=$(echo $VERSION | sed 's/^[[0-9]]*\.[[0-9]]*\.\([[0-9]]*\).*/\1/g')
+
+dnl LOKI_MAJOR=2
+dnl LOKI_MINOR=2
+dnl LOKI_BETA=0
+dnl LOKI_VERSION=$LOKI_MAJOR.$LOKI_MINOR.$LOKI_BETA
+dnl LOKI_FULLV=$LOKI_VERSION
+dnl VERSION=$LOKI_VERSION
+dnl PACKAGE=ferrisloki
+
+AC_SUBST(LOKI_MAJOR)
+AC_SUBST(LOKI_MINOR)
+AC_SUBST(LOKI_BETA)
+AC_SUBST(LOKI_FULLV)
+AC_SUBST(LOKI_VERSION)
+LT_RELEASE=$LOKI_MAJOR.$LOKI_MINOR
+AC_SUBST(LT_RELEASE)
+
+
+LIBLOKI_VERSION_LT_LINE=" -version-info $LOKI_MAJOR:0:0 "
+AC_SUBST(LIBLOKI_VERSION_LT_LINE)
+
+AM_CONFIG_HEADER(config.h)
+dnl AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
+AM_INIT_AUTOMAKE([1.9 tar-ustar])
+AM_MAINTAINER_MODE
+
+AC_CANONICAL_HOST
+AC_ISC_POSIX
+
+define([AC_LIBTOOL_LANG_F77_CONFIG], [:])dnl
+AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_CXX
+
+AC_STDC_HEADERS
+#AC_ARG_PROGRAM
+AM_PROG_LIBTOOL
+
+STLPORT_CFLAGS=""
+STLPORT_LDFLAGS=""
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+AM_FERRIS_STLPORT_OPTIONAL( 4.5.0 )
+AM_FERRIS_SIGC2( 2.0.0 )
+
+###############################################################################
+
+CFLAGS=" $STLPORT_CFLAGS $CXXFLAGS -DNDEBUG "
+CXXFLAGS=" $STLPORT_CFLAGS $CXXFLAGS -DNDEBUG "
+LDFLAGS=" $STLPORT_LDFLAGS $LDFLAGS"
+AC_SUBST(CFLAGS)
+AC_SUBST(CPPFLAGS)
+AC_SUBST(LDFLAGS)
+AC_SUBST(CXXFLAGS)
+AC_SUBST(CXXCPPFLAGS)
+
+################################################################################
+################################################################################
+################################################################################
+
+REQUIREMENTS="sigc++-2.0 " # boost-devel"
+AC_SUBST(REQUIREMENTS)
+
+#
+# All done.
+#
+AC_OUTPUT([
+Makefile
+include/Makefile
+include/FerrisLoki/Makefile
+include/FerrisLoki/loki/Makefile
+src/Makefile
+ferrisloki.spec
+ferrisloki.pc
+],
+[
+])
+

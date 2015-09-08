@@ -1,0 +1,75 @@
+Version: @LOKI_VERSION@
+Release: 50021
+Name:    ferrisloki
+Summary: Loki C++ library from Modern C++ Design with changes made
+License: LGPLv2+, Boost, Copyright only
+Group: System Environment/Libraries
+Source0: http://downloads.sourceforge.net/%{name}/%{name}-%{version}.tar.bz2
+BuildRoot: %{_tmppath}/%{name}-root
+Packager: Ben Martin <monkeyiq@users.sourceforge.net>
+URL: http://sourceforge.net/project/showfiles.php?group_id=16036
+BuildRequires: gcc-c++
+BuildRequires: libsigc++2-devel
+BuildRequires: pkgconfig
+
+
+%description
+A C++ system library for SmartPtr, Singletons, Functors, Factories 
+and other nice things. This version contains some changes for Linux
+and other new items in Extensions.hh
+
+%package devel
+Summary: Ferrisloki C++ library headers, static libraries and documentation
+Group: System Environment/Libraries
+Requires: %{name} >= %{version}
+Requires: libsigc++20-devel
+%description devel
+ferrisloki C++ library headers, static libraries and documentation
+
+
+
+
+%prep
+
+%setup -q
+
+%build
+%configure --with-sigcxx-2x=yes
+make %{?_smp_mflags}
+
+
+%install
+rm -rf $RPM_BUILD_ROOT
+make DESTDIR="$RPM_BUILD_ROOT" INSTALL="install -p" install
+rm -f $RPM_BUILD_ROOT/usr/lib/*.la
+rm -f $RPM_BUILD_ROOT/usr/lib64/*.la
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
+
+%files
+%defattr(-,root,root,-)
+%doc AUTHORS README COPYING ChangeLog
+%{_libdir}/*.so.*
+%{_libdir}/*.a
+
+
+%files devel
+%defattr(-,root,root,-)
+%{_libdir}/*.so 
+%{_includedir}/FerrisLoki/loki
+%{_includedir}/FerrisLoki/*.hh
+%{_includedir}/FerrisLoki/*.cpp
+%{_libdir}/pkgconfig/ferris*.pc
+
+
+%changelog
+* Mon Feb 9 2004 Ben Martin
+  Updated for not using @PREFIX@ etc. Used more default macros
+
+* Thu Nov 1 2001 Ben Martin
+- Created 

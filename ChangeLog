@@ -1,0 +1,136 @@
+(3.0.3)
+	
+2008-05-24  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* Moved to newer sigc++ API
+	
+(2.2.1)
+
+2007-11-19  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* Made sigc++2 the default selection. Some cleanups for open build system.
+	
+2006-03-22  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* Released 2.2.0
+	  Optional ability to build against libsigc++-2.x,
+	  CXXFLAGS is now better respected.
+	
+(2.2.0)
+
+2006-03-20  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* Optional ability to build against libsigc++-2.x
+
+	* CXXFLAGS is now used for g++ options instead of CFLAGS
+
+2006-03-14  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* Released 2.1.2
+	  Added BoostExtensions.hh with ability to use boost::serialize on Loki::smartptr<>.
+
+(2.1.2)
+
+2006-03-07  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* Added BoostExtensions.hh with ability to boost::serialize Loki::smartptr<>.
+	
+2005-10-07  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* Released 2.1.1
+	* Added FerrisLoki::FerrisExArraySmartPtrStoragew
+	
+(2.1.1) 
+
+2005-09-05  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* Released 2.1.0:
+	  Building against stlport is now optional,
+	  Made some virtual destructors in Functor classes to hush gcc
+	
+(2.1.0) 
+
+	* Made some virtual destructors in Functor classes to hush gcc
+	* Building against stlport is now optional
+	
+(2.0.6) 
+	
+2005-02-15  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* Changed ref_count_t to be unsigned 
+
+(2.0.5)
+
+2004-05-30  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* Fixed default link line for stlport which is installed
+	  without package config script.
+
+	* Fixed minor bug that prevented compilation with gcc34
+	
+2004-04-20  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* 2.0.4 released
+	
+(2.0.4)
+
+2004-04-20  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* 2.0.4 has some better stlport detection.
+
+2004-02-14  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* 2.0.3 released
+
+(2.0.3)
+	
+2004-02-14  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* build no longer changes prefix in configure.in. Moved to using 
+	  common M4 macros for configure time detection.
+
+2003-10-06  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* 2.0.2 released
+
+	
+(2.0.2)
+2003-09-30  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	*  Made the ref_count_t in FerrisHandle exposed so that language bindings 
+	   are easier to make.
+
+2003-08-31  monkeyiq  <monkeyiq@users.sourceforge.net>
+
+	* 2.0.1 released on 31 Aug 2003
+
+	
+(2.0.1)
+	Sat Aug 23, 2003 @ 12:49 AM
+	cpp files that projects should link with are now installed in FerrisLoki/ 
+	instead of FerrisLoki-2
+
+	FunctorImplBase no longer inherits from SmallObj
+	
+(2.0.0)
+	Mon Aug 18, 2003 @  6:33 PM
+	synced with loki-lib tree version April 4, 2003
+	a few tweaks from after the sync to get it to work with stlport 4.5
+	
+(1.6.2)
+	Sun May 18, 2003 @ 11:12 PM
+	configure.in changes for cleaner distro build
+	
+(1.6.0)
+	Mon May  5, 2003 @  9:08 PM
+	Added smart pointer policy classes used for doing intrusive reference counting.
+	First release as libferrisloki
+	
+(0.3.1)	
+	Changed AtomicDivide call to AtomicDecrement in Threads.h
+	
+	Sat Sep  8 03:06:19 EST 2001
+
+	modified the what() throw clause to be empty (and thus more standard compliant)
+	ported to using gcc 2.9.6 running STLport 4.0
+

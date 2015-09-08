@@ -1,0 +1,24 @@
+Source: ferrisloki
+Priority: extra
+Maintainer: Ben Martin <monkeyiq@users.sf.net>
+Build-Depends: debhelper (>= 5), autotools-dev, libsigc++-2.0-dev
+Standards-Version: 3.7.2
+Section: libs
+
+Package: ferrisloki-dev
+Section: libdevel
+Architecture: any
+Depends: ferrisloki1 (= ${Source-Version}), libsigc++-2.0-dev, pkg-config
+Description: Loki C++ library from Modern C++ Design with changes made.
+ A C++ system library for SmartPtr, Singletons, Functors, Factories 
+ and other nice things. This version contains some changes for Linux
+ and other new items in Extensions.hh
+
+Package: ferrisloki1
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Loki C++ library from Modern C++ Design with changes made.
+ A C++ system library for SmartPtr, Singletons, Functors, Factories 
+ and other nice things. This version contains some changes for Linux
+ and other new items in Extensions.hh

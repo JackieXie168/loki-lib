@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: ferrisloki
+Description: Version of standard loki library with extensions.
+Version: @VERSION@
+Requires: @REQUIREMENTS@
+Libs: -L${libdir} -lferrisloki @STLPORT_LIBS@ 
+Cflags: -I${includedir} -I${includedir}/FerrisLoki -I${includedir}/FerrisLoki/loki @STLPORT_CFLAGS@  
+
+
